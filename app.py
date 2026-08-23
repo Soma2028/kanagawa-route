@@ -12,44 +12,53 @@ st.set_page_config(page_title="鎌倉ルート最適化", page_icon="⛩️", la
 st.markdown("""
 <style>
 .summary-card {
-    background: #ffffff0d;
-    border: 1px solid #ffffff26;
+    background: #ffffff;
+    border: 1px solid #e0d9cc;
     border-radius: 12px;
     padding: 18px 20px;
     height: 100%;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
 }
-.summary-label { font-size: 0.85rem; opacity: 0.7; margin-bottom: 6px; }
-.summary-value { font-size: 1.9rem; font-weight: 700; line-height: 1.2; }
-.summary-sub { font-size: 0.8rem; opacity: 0.6; margin-top: 4px; }
+.summary-label { font-size: 0.85rem; color: #6b6b6b; margin-bottom: 6px; }
+.summary-value {
+    font-size: 1.9rem; font-weight: 700; line-height: 1.2; color: #2c2c2c;
+}
+.summary-sub { font-size: 0.8rem; color: #8a8a8a; margin-top: 4px; }
 
 .spot-card {
-    background: #ffffff0d;
-    border: 1px solid #ffffff26;
-    border-left: 4px solid #4a9d8f;
+    background: #ffffff;
+    border: 1px solid #e0d9cc;
+    border-left: 4px solid #3d7a6f;
     border-radius: 10px;
     padding: 14px 18px;
     margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
 }
 .spot-head { display: flex; align-items: baseline; gap: 10px; }
 .spot-num {
-    background: #4a9d8f; color: #fff; border-radius: 50%;
+    background: #3d7a6f; color: #fff; border-radius: 50%;
     width: 26px; height: 26px; display: inline-flex;
     align-items: center; justify-content: center;
     font-size: 0.85rem; font-weight: 700; flex-shrink: 0;
 }
-.spot-name { font-size: 1.15rem; font-weight: 700; }
-.spot-time { font-size: 0.9rem; opacity: 0.7; margin-left: auto; }
+.spot-name { font-size: 1.15rem; font-weight: 700; color: #2c2c2c; }
+.spot-time { font-size: 0.9rem; color: #8a8a8a; margin-left: auto; }
 .badges { margin-top: 10px; }
 .badge {
     display: inline-block; padding: 3px 10px; border-radius: 20px;
     font-size: 0.78rem; margin-right: 6px; margin-bottom: 4px;
-    background: #ffffff1a; border: 1px solid #ffffff26;
+    background: #f2ede3; border: 1px solid #e0d9cc; color: #4a4a4a;
 }
 .spot-desc {
     margin-top: 10px;
     font-size: 0.85rem;
     line-height: 1.6;
-    opacity: 0.75;
+    color: #5a5a5a;
+}
+.move-line {
+    margin: -6px 0 8px 14px;
+    font-size: 0.82rem;
+    color: #8a8a8a;
 }
 
 /* 右カラム（地図）をスクロールに追従させる */
@@ -147,9 +156,9 @@ with left:
 
         if order == 0:
             st.markdown(
-                f'<div class="spot-card" style="border-left-color:#e74c3c">'
+                f'<div class="spot-card" style="border-left-color:#c0392b">'
                 f'<div class="spot-head">'
-                f'<span class="spot-num" style="background:#e74c3c">S</span>'
+                f'<span class="spot-num" style="background:#c0392b">S</span>'
                 f'<span class="spot-name">{r["name"]}</span>'
                 f'<span class="spot-time">{clock} 出発</span>'
                 f'</div></div>',
@@ -163,6 +172,7 @@ with left:
                 f'<span class="badge">{fee}</span>'
                 f'<span class="badge">{r["area"]}</span>'
             )
+            desc = r["description"] if isinstance(r["description"], str) else ""
             st.markdown(
                 f'<div class="spot-card">'
                 f'<div class="spot-head">'
@@ -171,8 +181,8 @@ with left:
                 f'<span class="spot-time">{clock}</span>'
                 f'</div>'
                 f'<div class="badges">{badges}</div>'
-                f'<div class="spot-desc">{r["description"]}</div>'
-                f'</div>',
+                + (f'<div class="spot-desc">{desc}</div>' if desc else "")
+                + f'</div>',
                 unsafe_allow_html=True,
             )
 
@@ -186,8 +196,7 @@ with left:
             else:
                 label = f"🚶 徒歩 {mins}分"
             st.markdown(
-                f'<div style="margin:-6px 0 8px 14px; font-size:0.82rem; '
-                f'opacity:0.65;">↓ {label}</div>',
+                f'<div class="move-line">↓ {label}</div>',
                 unsafe_allow_html=True,
             )
 
@@ -210,7 +219,7 @@ with right:
             folium.PolyLine(seg, color="#ff9800", weight=3, opacity=0.9,
                             dash_array="8, 8", tooltip="電車").add_to(m)
         else:
-            folium.PolyLine(seg, color="#4a9d8f", weight=4, opacity=0.8,
+            folium.PolyLine(seg, color="#3d7a6f", weight=4, opacity=0.8,
                             tooltip="徒歩").add_to(m)
 
     # 近接するマーカーが重ならないよう、少しずつずらして描画する
@@ -242,12 +251,12 @@ with right:
                 icon_anchor=(13, 13),
                 html=(
                     f'<div style="background:'
-                    f'{"#e74c3c" if order == 0 else "#4a9d8f"};'
+                    f'{"#c0392b" if order == 0 else "#3d7a6f"};'
                     f'color:#fff;border-radius:50%;width:26px;height:26px;'
                     f'display:flex;align-items:center;justify-content:center;'
                     f'font-weight:700;font-size:12px;'
                     f'border:2px solid #fff;'
-                    f'box-shadow:0 2px 6px rgba(0,0,0,.4);">'
+                    f'box-shadow:0 2px 6px rgba(0,0,0,.3);">'
                     f'{order if order else "S"}</div>'
                 ),
             ),
