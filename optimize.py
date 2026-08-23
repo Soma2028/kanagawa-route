@@ -1,0 +1,135 @@
+"""制限時間内で満足度が最大になる周遊ルートを求める（OR-Tools Routing版）"""
+import numpy as np
+import pandas as pd
+from ortools.constraint_solver import pywrapcp, routing_enums_pb2
+
+START_NAME = "鎌倉駅"
+START_LAT, START_LON = 35.3192, 139.5500
+
+START_HOUR = 9.0        # 出発時刻
+BUDGET_MIN = 360        # 持ち時間（分）
+SEARCH_SEC = 15         # 探索時間
+
+
+def load_data():
+    """スポットと移動時間行列を読み込み、起点を先頭に追加する"""
+    df = pd.read_csv("spots_master.csv")
+    matrix = pd.read_csv("travel_matrix.csv", index_col=0).values
+
+    start = pd.DataFrame([{
+        "name": START_NAME, "area": "起点",
+        "lat": START_LAT, "lon": START_LON,
+        "stay_min": 0, "open_hour": 0, "close_hour": 24, "fee": 0, "score": 0,
+    }])
+    df = pd.concat([start, df], ignore_index=True)
+
+    from travel_time import walk_min, nearest_station, rail_min, WAIT_MIN
+
+    n = len(df)
+    full = np.zeros((n, n))
+    full[1:, 1:] = matrix
+    for k in range(1, n):
+        r = df.iloc[k]
+        m = walk_min(START_LAT, START_LON, r["lat"], r["lon"])
+        st_a, to_a = nearest_station(START_LAT, START_LON)
+        st_b, to_b = nearest_station(r["lat"], r["lon"])
+        if st_a != st_b:
+            m = min(m, to_a + WAIT_MIN + rail_min(st_a, st_b) + to_b)
+        full[0, k] = full[k, 0] = m
+
+    return df, full
+
+
+def solve(df, travel, budget_min, start_hour,
+          search_sec=SEARCH_SEC, penalty_scale=100, max_wait=0):
+    """満足度スコアの合計を最大化するルートを求める"""
+    n = len(df)
+    manager = pywrapcp.RoutingIndexManager(n, 1, 0)   # n地点, 1経路, 起点0
+    routing = pywrapcp.RoutingModel(manager)
+
+    def time_callback(from_index, to_index):
+        """移動時間＋出発地での滞在時間を返す"""
+        i = manager.IndexToNode(from_index)
+        j = manager.IndexToNode(to_index)
+        return int(round(travel[i, j])) + int(df.iloc[i]["stay_min"])
+
+    transit_idx = routing.RegisterTransitCallback(time_callback)
+    routing.SetArcCostEvaluatorOfAllVehicles(transit_idx)
+
+    # 時間次元: 累積時間が持ち時間を超えないようにする
+    routing.AddDimension(
+        transit_idx,
+        max_wait,      # 開門待ちを許す上限（分）
+        budget_min,    # 上限
+        True,          # 起点で0から開始
+        "Time",
+    )
+    time_dim = routing.GetDimensionOrDie("Time")
+
+    # 拝観時間を時間枠として設定する
+    for i in range(1, n):
+        r = df.iloc[i]
+        open_min = max(0, int((r["open_hour"] - start_hour) * 60))
+        close_min = int((r["close_hour"] - start_hour) * 60) - int(r["stay_min"])
+        close_min = min(max(close_min, open_min), budget_min)
+        index = manager.NodeToIndex(i)
+        time_dim.CumulVar(index).SetRange(open_min, close_min)
+
+    # 訪問を省略できるようにする（スコアが高いほど省略ペナルティが大きい）
+    for i in range(1, n):
+        penalty = int(df.iloc[i]["score"]) * penalty_scale
+        routing.AddDisjunction([manager.NodeToIndex(i)], penalty)
+
+    params = pywrapcp.DefaultRoutingSearchParameters()
+    params.first_solution_strategy = (
+        routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    )
+    params.local_search_metaheuristic = (
+        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+    )
+    params.time_limit.FromSeconds(search_sec)
+
+    solution = routing.SolveWithParameters(params)
+    if solution is None:
+        return None, None
+
+    route = []
+    index = routing.Start(0)
+    while not routing.IsEnd(index):
+        node = manager.IndexToNode(index)
+        route.append((node, solution.Value(time_dim.CumulVar(index))))
+        index = solution.Value(routing.NextVar(index))
+
+    total = sum(int(df.iloc[i]["score"]) for i, _ in route)
+    return route, total
+
+
+def show(label, df, result, total_score, start_hour):
+    """結果を1件表示する"""
+    print(f"===== {label} =====")
+    if result is None:
+        print("解が見つかりませんでした\n")
+        return
+    print(f"訪問数: {len(result) - 1}件 / 満足度合計: {total_score}")
+    for i, t in result:
+        r = df.iloc[i]
+        hh = start_hour + t / 60
+        print(f"  {int(hh):02d}:{int((hh % 1) * 60):02d}  {r['name']}"
+              f"（スコア{int(r['score'])}）")
+    print()
+
+
+if __name__ == "__main__":
+    df, travel = load_data()
+
+    # 実験1: 開門待ちを許可すると変わるか
+    for wait in (0, 60):
+        result, total = solve(df, travel, BUDGET_MIN, START_HOUR, max_wait=wait)
+        show(f"待機上限 {wait}分 / 持ち時間 {BUDGET_MIN}分",
+             df, result, total, START_HOUR)
+
+    # 実験2: 持ち時間を増やすと訪問数が増えるか
+    for budget in (360, 480):
+        result, total = solve(df, travel, budget, START_HOUR, max_wait=60)
+        show(f"待機上限 60分 / 持ち時間 {budget}分",
+             df, result, total, START_HOUR)
