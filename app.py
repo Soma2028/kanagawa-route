@@ -8,6 +8,32 @@ from optimize import load_data, solve
 
 st.set_page_config(page_title="鎌倉ルート最適化", page_icon="⛩️", layout="wide")
 
+# エリアごとの色分け
+AREA_COLORS = {
+    "北鎌倉": "#4a7c59",
+    "八幡宮": "#b5651d",
+    "金沢街道": "#6b5b95",
+    "長谷": "#2b7a9e",
+    "江ノ電": "#d4874a",
+    "西鎌倉": "#7a9e2b",
+    "大町材木座": "#9e2b5b",
+    "その他": "#5a5a5a",
+    "起点": "#c0392b",
+}
+
+# スポット種別のアイコン
+AREA_ICONS = {
+    "北鎌倉": "🍃", "八幡宮": "⛩️", "金沢街道": "🎋", "長谷": "🗿",
+    "江ノ電": "🌊", "西鎌倉": "🦊", "大町材木座": "🏯", "その他": "📍",
+}
+
+
+def stars(score):
+    """スコアを5段階の星に変換する"""
+    filled = round(score / 2)
+    return "★" * filled + "☆" * (5 - filled)
+
+
 # ---- スタイル ----
 st.markdown("""
 <style>
@@ -28,7 +54,6 @@ st.markdown("""
 .spot-card {
     background: #ffffff;
     border: 1px solid #e0d9cc;
-    border-left: 4px solid #3d7a6f;
     border-radius: 10px;
     padding: 14px 18px;
     margin-bottom: 12px;
@@ -36,19 +61,21 @@ st.markdown("""
 }
 .spot-head { display: flex; align-items: baseline; gap: 10px; }
 .spot-num {
-    background: #3d7a6f; color: #fff; border-radius: 50%;
+    color: #fff; border-radius: 50%;
     width: 26px; height: 26px; display: inline-flex;
     align-items: center; justify-content: center;
     font-size: 0.85rem; font-weight: 700; flex-shrink: 0;
 }
 .spot-name { font-size: 1.15rem; font-weight: 700; color: #2c2c2c; }
 .spot-time { font-size: 0.9rem; color: #8a8a8a; margin-left: auto; }
-.badges { margin-top: 10px; }
+.spot-stars { font-size: 0.9rem; margin-top: 8px; letter-spacing: 1px; }
+.badges { margin-top: 8px; }
 .badge {
     display: inline-block; padding: 3px 10px; border-radius: 20px;
     font-size: 0.78rem; margin-right: 6px; margin-bottom: 4px;
     background: #f2ede3; border: 1px solid #e0d9cc; color: #4a4a4a;
 }
+.badge-area { color: #fff; border: none; }
 .spot-desc {
     margin-top: 10px;
     font-size: 0.85rem;
@@ -87,7 +114,7 @@ with st.sidebar:
                             help="未選択なら全域から選びます")
 
     with st.expander("詳細設定"):
-        search_sec = st.selectbox("計算時間（秒）", [5, 15, 30], index=1)
+        search_sec = st.selectbox("計算時間（秒）", [5, 15, 30], index=0)
         max_wait = st.slider("開門待ちの許容", 0, 90, 60, 15, format="%d分")
 
     run = st.button("ルートを計算", type="primary", use_container_width=True)
@@ -153,33 +180,39 @@ with left:
         r = work.iloc[i]
         hh = start_hour + t / 60
         clock = f"{int(hh):02d}:{int((hh % 1) * 60):02d}"
+        color = AREA_COLORS.get(r["area"], "#5a5a5a")
 
         if order == 0:
             st.markdown(
-                f'<div class="spot-card" style="border-left-color:#c0392b">'
+                f'<div class="spot-card" style="border-left:4px solid {color}">'
                 f'<div class="spot-head">'
-                f'<span class="spot-num" style="background:#c0392b">S</span>'
+                f'<span class="spot-num" style="background:{color}">S</span>'
                 f'<span class="spot-name">{r["name"]}</span>'
                 f'<span class="spot-time">{clock} 出発</span>'
                 f'</div></div>',
                 unsafe_allow_html=True,
             )
         else:
+            icon = AREA_ICONS.get(r["area"], "📍")
             fee = f"¥{int(r['fee'])}" if r["fee"] else "無料"
+            score = int(r["score"])
             badges = (
-                f'<span class="badge">スコア {int(r["score"])}</span>'
+                f'<span class="badge badge-area" style="background:{color}">'
+                f'{r["area"]}</span>'
                 f'<span class="badge">滞在 {int(r["stay_min"])}分</span>'
                 f'<span class="badge">{fee}</span>'
-                f'<span class="badge">{r["area"]}</span>'
             )
             desc = r["description"] if isinstance(r["description"], str) else ""
             st.markdown(
-                f'<div class="spot-card">'
+                f'<div class="spot-card" style="border-left:4px solid {color}">'
                 f'<div class="spot-head">'
-                f'<span class="spot-num">{order}</span>'
-                f'<span class="spot-name">{r["name"]}</span>'
+                f'<span class="spot-num" style="background:{color}">{order}</span>'
+                f'<span class="spot-name">{icon} {r["name"]}</span>'
                 f'<span class="spot-time">{clock}</span>'
                 f'</div>'
+                f'<div class="spot-stars" style="color:{color}">'
+                f'{stars(score)} <span style="color:#8a8a8a;font-size:0.8rem">'
+                f'スコア {score}</span></div>'
                 f'<div class="badges">{badges}</div>'
                 + (f'<div class="spot-desc">{desc}</div>' if desc else "")
                 + f'</div>',
@@ -219,7 +252,7 @@ with right:
             folium.PolyLine(seg, color="#ff9800", weight=3, opacity=0.9,
                             dash_array="8, 8", tooltip="電車").add_to(m)
         else:
-            folium.PolyLine(seg, color="#3d7a6f", weight=4, opacity=0.8,
+            folium.PolyLine(seg, color="#5a8a7a", weight=4, opacity=0.7,
                             tooltip="徒歩").add_to(m)
 
     # 近接するマーカーが重ならないよう、少しずつずらして描画する
@@ -229,9 +262,9 @@ with right:
         hh = start_hour + t / 60
         clock = f"{int(hh):02d}:{int((hh % 1) * 60):02d}"
         label = f"{order if order else 'S'}. {r['name']} {clock}"
+        color = AREA_COLORS.get(r["area"], "#5a5a5a")
 
         lat, lon = r["lat"], r["lon"]
-        # 既に近い位置に置いたマーカーがあれば、円状にずらす
         offset = sum(
             1 for (a, b) in seen
             if abs(a - lat) < 0.004 and abs(b - lon) < 0.004
@@ -250,8 +283,7 @@ with right:
                 icon_size=(26, 26),
                 icon_anchor=(13, 13),
                 html=(
-                    f'<div style="background:'
-                    f'{"#c0392b" if order == 0 else "#3d7a6f"};'
+                    f'<div style="background:{color};'
                     f'color:#fff;border-radius:50%;width:26px;height:26px;'
                     f'display:flex;align-items:center;justify-content:center;'
                     f'font-weight:700;font-size:12px;'
@@ -263,5 +295,13 @@ with right:
         ).add_to(m)
 
     html(m._repr_html_(), height=620)
-    st.caption("緑の実線＝徒歩 / オレンジの破線＝電車"
-               "（マーカーは重なり回避のため実位置から多少ずれます）")
+
+    # エリアの凡例
+    legend = " ".join(
+        f'<span style="display:inline-block;margin-right:10px;font-size:0.78rem">'
+        f'<span style="display:inline-block;width:10px;height:10px;'
+        f'border-radius:50%;background:{c};margin-right:4px"></span>{a}</span>'
+        for a, c in AREA_COLORS.items() if a != "起点"
+    )
+    st.markdown(legend, unsafe_allow_html=True)
+    st.caption("実線＝徒歩 / オレンジの破線＝電車")
