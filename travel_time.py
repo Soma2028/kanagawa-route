@@ -1,9 +1,9 @@
-"""スポット間の移動時間行列を作る（徒歩＋鉄道の併用を考慮）"""
+"""スポット間の移動時間行列を作る（ORS徒歩実測 ＋ 鉄道の併用を考慮）"""
 import numpy as np
 import pandas as pd
 
-WALK_SPEED_KMH = 4.0
-DETOUR_RATIO = 1.4
+WALK_SPEED_KMH = 4.0    # 近似計算用（駅までの徒歩などに使う）
+DETOUR_RATIO = 1.4      # 同上
 WAIT_MIN = 6.0          # 江ノ電・横須賀線の平均待ち時間
 
 # 主要駅の座標
@@ -37,7 +37,11 @@ def haversine(lat1, lon1, lat2, lon2):
 
 
 def walk_min(lat1, lon1, lat2, lon2):
-    """2地点間の徒歩所要時間（分）"""
+    """2地点間の徒歩所要時間（分）を直線距離から近似する
+
+    スポット間は ORS の実測値を使うが、駅までの徒歩など
+    実測行列に含まれない区間ではこの近似を用いる。
+    """
     km = haversine(lat1, lon1, lat2, lon2)
     return km * DETOUR_RATIO / WALK_SPEED_KMH * 60
 
@@ -57,9 +61,22 @@ def rail_min(st_a, st_b):
     return abs(RAIL_FROM_KAMAKURA[st_a] - RAIL_FROM_KAMAKURA[st_b])
 
 
+def load_walk_matrix(df):
+    """ORS で取得した徒歩実測行列を読み込む"""
+    m = pd.read_csv("walk_matrix_ors.csv", index_col=0)
+    # spots_master.csv と行順が一致していることを確認する
+    if list(m.index) != list(df["name"]):
+        raise ValueError(
+            "walk_matrix_ors.csv とスポットの並びが一致しません。"
+            "fetch_walk_matrix.py を再実行してください"
+        )
+    return m.values
+
+
 def build_matrix(df):
-    """徒歩のみと鉄道利用を比較し、短いほうを採用した行列を返す"""
+    """徒歩実測と鉄道利用を比較し、短いほうを採用した行列を返す"""
     n = len(df)
+    walk = load_walk_matrix(df)
     minutes = np.zeros((n, n))
     modes = np.empty((n, n), dtype=object)
 
@@ -71,8 +88,7 @@ def build_matrix(df):
                 modes[i, j] = "-"
                 continue
 
-            a, b = df.iloc[i], df.iloc[j]
-            only_walk = walk_min(a["lat"], a["lon"], b["lat"], b["lon"])
+            only_walk = walk[i, j]        # ORS の徒歩実測値
 
             st_a, to_a = stations[i]
             st_b, to_b = stations[j]
@@ -99,8 +115,7 @@ if __name__ == "__main__":
         "travel_matrix.csv"
     )
 
-    rail_count = (modes == "-").sum()
-    print(f"{len(df)}×{len(df)} の行列を作成しました")
+    print(f"{len(df)}×{len(df)} の行列を作成しました（徒歩はORS実測）")
     print(f"平均移動時間: {matrix[matrix > 0].mean():.1f}分")
     print(f"最長: {matrix.max():.1f}分")
     print()
