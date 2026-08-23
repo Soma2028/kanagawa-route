@@ -19,7 +19,7 @@ def load_data():
     start = pd.DataFrame([{
         "name": START_NAME, "area": "起点",
         "lat": START_LAT, "lon": START_LON,
-        "stay_min": 0, "open_hour": 0, "close_hour": 24, "fee": 0, "score": 0,
+        "stay_min": 0, "open_hour": 0, "close_hour": 24, "fee": 0, "score": 0, "description": "",
     }])
     df = pd.concat([start, df], ignore_index=True)
 

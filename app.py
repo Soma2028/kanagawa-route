@@ -1,5 +1,6 @@
 """鎌倉の周遊ルートを最適化して地図に表示するアプリ"""
 import folium
+import numpy as np
 import streamlit as st
 from streamlit.components.v1 import html
 
@@ -43,6 +44,12 @@ st.markdown("""
     display: inline-block; padding: 3px 10px; border-radius: 20px;
     font-size: 0.78rem; margin-right: 6px; margin-bottom: 4px;
     background: #ffffff1a; border: 1px solid #ffffff26;
+}
+.spot-desc {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    opacity: 0.75;
 }
 
 /* 右カラム（地図）をスクロールに追従させる */
@@ -164,6 +171,7 @@ with left:
                 f'<span class="spot-time">{clock}</span>'
                 f'</div>'
                 f'<div class="badges">{badges}</div>'
+                f'<div class="spot-desc">{r["description"]}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -194,26 +202,7 @@ with right:
     m.fit_bounds([[min(lats), min(lons)], [max(lats), max(lons)]],
                  padding=(30, 30))
 
-    for order, (i, t) in enumerate(result):
-        r = work.iloc[i]
-        hh = start_hour + t / 60
-        clock = f"{int(hh):02d}:{int((hh % 1) * 60):02d}"
-        label = f"{order if order else 'S'}. {r['name']} {clock}"
-        folium.Marker(
-            [r["lat"], r["lon"]],
-            popup=folium.Popup(label, max_width=200),
-            tooltip=label,
-            icon=folium.DivIcon(html=(
-                f'<div style="background:{"#e74c3c" if order == 0 else "#4a9d8f"};'
-                f'color:#fff;border-radius:50%;width:28px;height:28px;'
-                f'display:flex;align-items:center;justify-content:center;'
-                f'font-weight:700;font-size:13px;'
-                f'box-shadow:0 2px 6px rgba(0,0,0,.35);">'
-                f'{order if order else "S"}</div>'
-            )),
-        ).add_to(m)
-
-    # 区間ごとに徒歩と鉄道を描き分ける
+    # 区間ごとに徒歩と鉄道を描き分ける（線は実際の座標で引く）
     for k in range(len(result) - 1):
         i, j = result[k][0], result[k + 1][0]
         seg = [coords[k], coords[k + 1]]
@@ -224,5 +213,46 @@ with right:
             folium.PolyLine(seg, color="#4a9d8f", weight=4, opacity=0.8,
                             tooltip="徒歩").add_to(m)
 
+    # 近接するマーカーが重ならないよう、少しずつずらして描画する
+    seen = []
+    for order, (i, t) in enumerate(result):
+        r = work.iloc[i]
+        hh = start_hour + t / 60
+        clock = f"{int(hh):02d}:{int((hh % 1) * 60):02d}"
+        label = f"{order if order else 'S'}. {r['name']} {clock}"
+
+        lat, lon = r["lat"], r["lon"]
+        # 既に近い位置に置いたマーカーがあれば、円状にずらす
+        offset = sum(
+            1 for (a, b) in seen
+            if abs(a - lat) < 0.004 and abs(b - lon) < 0.004
+        )
+        seen.append((lat, lon))
+        if offset:
+            angle = offset * 2.4          # ラジアン、重なるたびに回す
+            lat += 0.0022 * np.cos(angle)
+            lon += 0.0022 * np.sin(angle)
+
+        folium.Marker(
+            [lat, lon],
+            popup=folium.Popup(label, max_width=220),
+            tooltip=label,
+            icon=folium.DivIcon(
+                icon_size=(26, 26),
+                icon_anchor=(13, 13),
+                html=(
+                    f'<div style="background:'
+                    f'{"#e74c3c" if order == 0 else "#4a9d8f"};'
+                    f'color:#fff;border-radius:50%;width:26px;height:26px;'
+                    f'display:flex;align-items:center;justify-content:center;'
+                    f'font-weight:700;font-size:12px;'
+                    f'border:2px solid #fff;'
+                    f'box-shadow:0 2px 6px rgba(0,0,0,.4);">'
+                    f'{order if order else "S"}</div>'
+                ),
+            ),
+        ).add_to(m)
+
     html(m._repr_html_(), height=620)
-    st.caption("緑の実線＝徒歩 / オレンジの破線＝電車")
+    st.caption("緑の実線＝徒歩 / オレンジの破線＝電車"
+               "（マーカーは重なり回避のため実位置から多少ずれます）")
