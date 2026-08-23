@@ -1,5 +1,5 @@
 # 鎌倉 周遊ルート最適化アプリ
-**デモ: https://kanagawa-route-flzm2vvc9dyvur4cd2sxsw.streamlit.app/**
+https://kanagawa-route-flzm2vvc9dyvur4cd2sxsw.streamlit.app/
 持ち時間と好みを入力すると、拝観時間の制約を守りつつ満足度が最大になる
 鎌倉観光の順路を提案する Web アプリ。
 
