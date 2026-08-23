@@ -41,7 +41,7 @@ def load_data():
 
 
 def solve(df, travel, budget_min, start_hour,
-          search_sec=SEARCH_SEC, penalty_scale=100, max_wait=0):
+          search_sec=SEARCH_SEC, penalty_scale=100, max_wait=60):
     """満足度スコアの合計を最大化するルートを求める"""
     n = len(df)
     manager = pywrapcp.RoutingIndexManager(n, 1, 0)   # n地点, 1経路, 起点0
@@ -56,7 +56,7 @@ def solve(df, travel, budget_min, start_hour,
     transit_idx = routing.RegisterTransitCallback(time_callback)
     routing.SetArcCostEvaluatorOfAllVehicles(transit_idx)
 
-    # 時間次元: 累積時間が持ち時間を超えないようにする
+    # 時間次元: 開門待ちを許しつつ、累積時間が持ち時間を超えないようにする
     routing.AddDimension(
         transit_idx,
         max_wait,      # 開門待ちを許す上限（分）
@@ -121,15 +121,5 @@ def show(label, df, result, total_score, start_hour):
 
 if __name__ == "__main__":
     df, travel = load_data()
-
-    # 実験1: 開門待ちを許可すると変わるか
-    for wait in (0, 60):
-        result, total = solve(df, travel, BUDGET_MIN, START_HOUR, max_wait=wait)
-        show(f"待機上限 {wait}分 / 持ち時間 {BUDGET_MIN}分",
-             df, result, total, START_HOUR)
-
-    # 実験2: 持ち時間を増やすと訪問数が増えるか
-    for budget in (360, 480):
-        result, total = solve(df, travel, budget, START_HOUR, max_wait=60)
-        show(f"待機上限 60分 / 持ち時間 {budget}分",
-             df, result, total, START_HOUR)
+    result, total = solve(df, travel, BUDGET_MIN, START_HOUR)
+    show(f"持ち時間 {BUDGET_MIN}分", df, result, total, START_HOUR)
