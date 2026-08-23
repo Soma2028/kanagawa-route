@@ -27,18 +27,34 @@ def load_data():
 
     n = len(df)
     full = np.zeros((n, n))
+    modes = np.empty((n, n), dtype=object)
+    modes[:] = "徒歩"
     full[1:, 1:] = matrix
+
+    # 既存区間の手段を再判定する
+    for i in range(1, n):
+        for j in range(1, n):
+            if i == j:
+                continue
+            a, b = df.iloc[i], df.iloc[j]
+            only_walk = walk_min(a["lat"], a["lon"], b["lat"], b["lon"])
+            if full[i, j] < only_walk - 0.5:
+                modes[i, j] = "鉄道"
+
+    # 起点から各スポットへの移動時間を計算する
     for k in range(1, n):
         r = df.iloc[k]
         m = walk_min(START_LAT, START_LON, r["lat"], r["lon"])
         st_a, to_a = nearest_station(START_LAT, START_LON)
         st_b, to_b = nearest_station(r["lat"], r["lon"])
         if st_a != st_b:
-            m = min(m, to_a + WAIT_MIN + rail_min(st_a, st_b) + to_b)
+            via = to_a + WAIT_MIN + rail_min(st_a, st_b) + to_b
+            if via < m:
+                m = via
+                modes[0, k] = modes[k, 0] = "鉄道"
         full[0, k] = full[k, 0] = m
 
-    return df, full
-
+    return df, full, modes
 
 def solve(df, travel, budget_min, start_hour,
           search_sec=SEARCH_SEC, penalty_scale=100, max_wait=60):
@@ -120,6 +136,6 @@ def show(label, df, result, total_score, start_hour):
 
 
 if __name__ == "__main__":
-    df, travel = load_data()
+    df, travel, modes = load_data()
     result, total = solve(df, travel, BUDGET_MIN, START_HOUR)
     show(f"持ち時間 {BUDGET_MIN}分", df, result, total, START_HOUR)

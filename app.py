@@ -9,7 +9,7 @@ st.set_page_config(page_title="鎌倉ルート最適化", layout="wide")
 st.title("鎌倉 周遊ルート最適化")
 st.caption("持ち時間と好みに合わせて、満足度が最大になる順路を提案します")
 
-df, travel = load_data()
+df, travel, modes = load_data()
 
 # ---- 入力 ----
 col1, col2, col3 = st.columns(3)
@@ -65,7 +65,7 @@ if st.button("ルートを計算", type="primary"):
         st.dataframe(rows, use_container_width=True, hide_index=True)
         st.metric("拝観料合計", f"{total_fee:,}円")
 
-    # ---- 地図 ----
+       # ---- 地図 ----
     with right:
         st.subheader("ルート")
         coords = [(work.iloc[i]["lat"], work.iloc[i]["lon"]) for i, _ in result]
@@ -85,7 +85,25 @@ if st.button("ルートを計算", type="primary"):
                 ),
             ).add_to(m)
 
-        folium.PolyLine(coords, weight=3, opacity=0.7).add_to(m)
+        # 区間ごとに徒歩と鉄道を描き分ける
+        rail_used = False
+        for k in range(len(result) - 1):
+            i = result[k][0]
+            j = result[k + 1][0]
+            seg = [coords[k], coords[k + 1]]
+            if modes[i, j] == "鉄道":
+                rail_used = True
+                folium.PolyLine(
+                    seg, color="orange", weight=3, opacity=0.8,
+                    dash_array="8, 8", tooltip="電車移動",
+                ).add_to(m)
+            else:
+                folium.PolyLine(
+                    seg, color="blue", weight=3, opacity=0.7, tooltip="徒歩",
+                ).add_to(m)
+
         html(m._repr_html_(), height=520)
+        st.caption("青の実線＝徒歩 / オレンジの破線＝電車"
+                   + ("" if rail_used else "（このルートは全区間徒歩）"))
 else:
     st.info("条件を設定して「ルートを計算」を押してください")
