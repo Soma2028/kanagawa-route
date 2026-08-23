@@ -12,7 +12,7 @@ SEARCH_SEC = 15         # 探索時間
 
 
 def load_data():
-    """スポットと移動時間行列を読み込み、起点を先頭に追加する"""
+    """スポット、移動時間行列、移動手段を読み込み、起点を先頭に追加する"""
     df = pd.read_csv("spots_master.csv")
     matrix = pd.read_csv("travel_matrix.csv", index_col=0).values
 
@@ -31,7 +31,10 @@ def load_data():
     modes[:] = "徒歩"
     full[1:, 1:] = matrix
 
-    # 既存区間の手段を再判定する
+    # 各スポットの最寄駅を先に求めておく
+    stations = [nearest_station(r["lat"], r["lon"]) for _, r in df.iterrows()]
+
+    # 既存区間について、徒歩より速ければ鉄道利用と判定する
     for i in range(1, n):
         for j in range(1, n):
             if i == j:
@@ -39,22 +42,24 @@ def load_data():
             a, b = df.iloc[i], df.iloc[j]
             only_walk = walk_min(a["lat"], a["lon"], b["lat"], b["lon"])
             if full[i, j] < only_walk - 0.5:
-                modes[i, j] = "鉄道"
+                modes[i, j] = f"鉄道:{stations[i][0]}→{stations[j][0]}"
 
     # 起点から各スポットへの移動時間を計算する
+    st_a, to_a = nearest_station(START_LAT, START_LON)
     for k in range(1, n):
         r = df.iloc[k]
         m = walk_min(START_LAT, START_LON, r["lat"], r["lon"])
-        st_a, to_a = nearest_station(START_LAT, START_LON)
-        st_b, to_b = nearest_station(r["lat"], r["lon"])
+        st_b, to_b = stations[k]
         if st_a != st_b:
             via = to_a + WAIT_MIN + rail_min(st_a, st_b) + to_b
             if via < m:
                 m = via
-                modes[0, k] = modes[k, 0] = "鉄道"
+                modes[0, k] = f"鉄道:{st_a}→{st_b}"
+                modes[k, 0] = f"鉄道:{st_b}→{st_a}"
         full[0, k] = full[k, 0] = m
 
     return df, full, modes
+
 
 def solve(df, travel, budget_min, start_hour,
           search_sec=SEARCH_SEC, penalty_scale=100, max_wait=60):

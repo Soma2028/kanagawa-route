@@ -44,7 +44,13 @@ st.markdown("""
     font-size: 0.78rem; margin-right: 6px; margin-bottom: 4px;
     background: #ffffff1a; border: 1px solid #ffffff26;
 }
-.badge-move { background: #ff980026; border-color: #ff980055; }
+
+/* 右カラム（地図）をスクロールに追従させる */
+[data-testid="stHorizontalBlock"] > div:nth-child(2) {
+    position: sticky;
+    top: 3rem;
+    align-self: flex-start;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -57,10 +63,8 @@ df, travel, modes = load_data()
 with st.sidebar:
     st.header("検索条件")
 
-    start_hour = st.slider("出発時刻", 7.0, 12.0, 9.0, 0.5,
-                           format="%.1f時")
-    hours = st.slider("持ち時間", 3.0, 10.0, 6.0, 0.5,
-                      format="%.1f時間")
+    start_hour = st.slider("出発時刻", 7.0, 12.0, 9.0, 0.5, format="%.1f時")
+    hours = st.slider("持ち時間", 3.0, 10.0, 6.0, 0.5, format="%.1f時間")
 
     areas = sorted(df[df["area"] != "起点"]["area"].unique())
     picked = st.multiselect("行きたいエリア", areas,
@@ -68,8 +72,7 @@ with st.sidebar:
 
     with st.expander("詳細設定"):
         search_sec = st.selectbox("計算時間（秒）", [5, 15, 30], index=1)
-        max_wait = st.slider("開門待ちの許容", 0, 90, 60, 15,
-                             format="%d分")
+        max_wait = st.slider("開門待ちの許容", 0, 90, 60, 15, format="%d分")
 
     run = st.button("ルートを計算", type="primary", use_container_width=True)
 
@@ -168,11 +171,15 @@ with left:
         # 次のスポットへの移動を区間として挟む
         if order < len(result) - 1:
             j = result[order + 1][0]
-            mode = "🚃 電車" if modes[i, j] == "鉄道" else "🚶 徒歩"
+            raw = modes[i, j]
             mins = int(round(travel[i, j]))
+            if raw.startswith("鉄道"):
+                label = f"🚃 {raw.split(':')[1]} {mins}分"
+            else:
+                label = f"🚶 徒歩 {mins}分"
             st.markdown(
                 f'<div style="margin:-6px 0 8px 14px; font-size:0.82rem; '
-                f'opacity:0.65;">↓ {mode} {mins}分</div>',
+                f'opacity:0.65;">↓ {label}</div>',
                 unsafe_allow_html=True,
             )
 
@@ -184,7 +191,8 @@ with right:
     lats = [c[0] for c in coords]
     lons = [c[1] for c in coords]
     m = folium.Map(tiles="cartodbpositron")
-    m.fit_bounds([[min(lats), min(lons)], [max(lats), max(lons)]], padding=(30, 30))
+    m.fit_bounds([[min(lats), min(lons)], [max(lats), max(lons)]],
+                 padding=(30, 30))
 
     for order, (i, t) in enumerate(result):
         r = work.iloc[i]
@@ -209,7 +217,7 @@ with right:
     for k in range(len(result) - 1):
         i, j = result[k][0], result[k + 1][0]
         seg = [coords[k], coords[k + 1]]
-        if modes[i, j] == "鉄道":
+        if modes[i, j].startswith("鉄道"):
             folium.PolyLine(seg, color="#ff9800", weight=3, opacity=0.9,
                             dash_array="8, 8", tooltip="電車").add_to(m)
         else:
