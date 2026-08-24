@@ -96,7 +96,10 @@ export default function Hero({ route, request }: Props) {
             label="所要時間"
             target={route.summary.end_min / 60}
             format={(v) => `${v.toFixed(1)}時間`}
-            sub={`移動 ${route.summary.move_total_min}分 / 滞在 ${route.summary.stay_total_min}分`}
+            sub={
+              `移動 ${route.summary.move_total_min}分 / 滞在 ${route.summary.stay_total_min}分`
+              + (route.summary.lunch_min > 0 ? ` / 昼食 ${route.summary.lunch_min}分` : "")
+            }
           />
           <HeroStat
             label="拝観料合計"

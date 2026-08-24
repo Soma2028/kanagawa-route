@@ -12,6 +12,7 @@ export interface Stop {
   order: number;
   name: string;
   area: string;
+  type: "start" | "meal" | "spot";
   lat: number;
   lon: number;
   arrival_clock: string;
@@ -39,6 +40,7 @@ export interface Summary {
   visited_count: number;
   total_fee: number;
   stay_total_min: number;
+  lunch_min: number;
   move_total_min: number;
   end_min: number;
   end_clock: string;
@@ -67,6 +69,7 @@ export interface RouteResponse {
   excluded: ExcludedSpot[];
   excluded_note: string;
   breakdown: BreakdownItem[];
+  lunch_note: string | null;
 }
 
 export interface AreasResponse {

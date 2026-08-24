@@ -16,6 +16,7 @@ class Stop(BaseModel):
     order: int
     name: str
     area: str
+    type: Literal["start", "meal", "spot"]
     lat: float
     lon: float
     arrival_clock: str
@@ -44,6 +45,7 @@ class Summary(BaseModel):
     visited_count: int
     total_fee: int
     stay_total_min: int
+    lunch_min: int
     move_total_min: int
     end_min: int
     end_clock: str
@@ -75,6 +77,7 @@ class RouteResponse(BaseModel):
     excluded: list[ExcludedSpot]
     excluded_note: str
     breakdown: list[BreakdownItem]
+    lunch_note: str | None  # 正午をまたぐのに昼食を組み込めなかった場合の注記
 
 
 class AreasResponse(BaseModel):

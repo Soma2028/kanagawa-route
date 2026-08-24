@@ -26,9 +26,9 @@ export default function Timeline({ route }: { route: RouteResponse }) {
             <div key={stop.name + order} className="flex shrink-0 items-stretch gap-2">
               <div
                 className={
-                  order === 0
-                    ? "w-32 shrink-0 self-start rounded-[10px] border border-[#e0d9cc] bg-white p-3 shadow-sm"
-                    : "w-56 shrink-0 rounded-[10px] border border-[#e0d9cc] bg-white p-3 shadow-sm"
+                  stop.type === "spot"
+                    ? "w-56 shrink-0 rounded-[10px] border border-[#e0d9cc] bg-white p-3 shadow-sm"
+                    : "w-32 shrink-0 self-start rounded-[10px] border border-[#e0d9cc] bg-white p-3 shadow-sm"
                 }
                 style={{
                   borderTop: `4px solid ${color}`,
@@ -36,7 +36,7 @@ export default function Timeline({ route }: { route: RouteResponse }) {
                   animationDelay: `${order * 40}ms`,
                 }}
               >
-                {order === 0 ? (
+                {stop.type === "start" ? (
                   <>
                     <span
                       className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.8rem] font-bold text-white"
@@ -46,6 +46,19 @@ export default function Timeline({ route }: { route: RouteResponse }) {
                     </span>
                     <div className="mt-1.5 text-[0.9rem] font-bold text-[#2c2c2c]">{stop.name}</div>
                     <div className="mt-0.5 text-[0.75rem] text-[#8a8a8a]">{stop.arrival_clock} 出発</div>
+                  </>
+                ) : stop.type === "meal" ? (
+                  <>
+                    <span
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.9rem]"
+                      style={{ background: color }}
+                    >
+                      {areaIcon(stop.area)}
+                    </span>
+                    <div className="mt-1.5 text-[0.9rem] font-bold text-[#2c2c2c]">昼食休憩</div>
+                    <div className="mt-0.5 text-[0.75rem] text-[#8a8a8a]">
+                      {stop.arrival_clock}〜{stop.stay_min}分
+                    </div>
                   </>
                 ) : (
                   <>
@@ -107,7 +120,8 @@ export default function Timeline({ route }: { route: RouteResponse }) {
                 )}
               </div>
 
-              {segment && <Connector segment={segment} />}
+              {/* 0分の区間（丸め誤差等で稀に発生）は表示しても意味がないため出さない */}
+              {segment && segment.minutes > 0 && <Connector segment={segment} />}
             </div>
           );
         })}

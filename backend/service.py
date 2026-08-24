@@ -12,6 +12,8 @@ result に対する事後的な後付け計算であり、optimize.solve() 自�
 そのまま追加した場合の試算」であって、他スポットとの入れ替えは考慮しないため
 「不採用の理由」の証明ではない（EXCLUDED_NOTE として明記し、API にも含める）。
 """
+from optimize import LUNCH_NAME, crosses_lunch
+
 from .schemas import (
     BreakdownItem,
     ExcludedSpot,
@@ -26,6 +28,8 @@ EXCLUDED_NOTE = (
     "ここでの数値は「今回のルートにそのまま追加した場合」の試算です。"
     "他のスポットとの入れ替えは考慮していないため、不採用の理由そのものではありません。"
 )
+
+LUNCH_NOT_INCLUDED_NOTE = "持ち時間が足りないため、昼食の時間を含めることができませんでした。"
 
 
 def clock_str(hour_float: float) -> str:
@@ -60,6 +64,8 @@ def compute_excluded(work, travel, result, start_hour, budget_min, max_wait, end
         if c in visited:
             continue
         r = work.iloc[c]
+        if r["name"] == LUNCH_NAME:
+            continue  # 昼食は観光候補ではないため「外した候補」には含めない
         open_min, close_min = _time_window(r, start_hour, budget_min)
         stay_c = int(r["stay_min"])
 
@@ -156,13 +162,16 @@ def compute_breakdown(work, travel, modes, result, total, summary):
         message=f"移動時間は総所要時間の{move_ratio:.0f}%です",
     ))
 
-    # スコア達成率（エリア選好で減点済みの work を基準にする＝ソルバーが実際に最大化した対象）
-    all_score = int(work.iloc[1:]["score"].sum())
+    # スコア達成率（エリア選好で減点済みの work を基準にする＝ソルバーが実際に最大化した対象）。
+    # 昼食は観光スポットではないため、母数からもスコア合計からも除く（スコアは
+    # 元々0なので合計には影響しないが、件数表示から除くために明示的に絞り込む）
+    real_spots = work[(work.index != 0) & (work["name"] != LUNCH_NAME)]
+    all_score = int(real_spots["score"].sum())
     pct = total / all_score * 100 if all_score else 0.0
     items.append(BreakdownItem(
         type="score_rate",
         message=(
-            f"全{len(work) - 1}スポット中{len(result) - 1}件、"
+            f"全{len(real_spots)}スポット中{summary.visited_count}件、"
             f"獲得可能スコアの{pct:.0f}%（{total}/{all_score}点）を達成しています"
         ),
     ))
@@ -171,13 +180,17 @@ def compute_breakdown(work, travel, modes, result, total, summary):
 
 
 def summarize_route(work, travel, modes, photos, result, total, start_hour, budget_min, max_wait) -> RouteResponse:
-    spots = result[1:]                      # 起点を除いたスポット
-    total_fee = sum(int(work.iloc[i]["fee"]) for i, _ in spots)
+    spots = result[1:]                      # 起点を除いたスポット・昼食
+    spots_real = [(i, t) for i, t in spots if work.iloc[i]["name"] != LUNCH_NAME]
+    lunch_visits = [(i, t) for i, t in spots if work.iloc[i]["name"] == LUNCH_NAME]
+
+    total_fee = sum(int(work.iloc[i]["fee"]) for i, _ in spots_real)
     last_i, last_t = result[-1]
     end_min = last_t + int(work.iloc[last_i]["stay_min"]) + travel[last_i, 0]
     end_hour = start_hour + end_min / 60
-    stay_total = sum(int(work.iloc[i]["stay_min"]) for i, _ in spots)
-    move_total = int(end_min - stay_total)
+    stay_total = sum(int(work.iloc[i]["stay_min"]) for i, _ in spots_real)
+    lunch_min = sum(int(work.iloc[i]["stay_min"]) for i, _ in lunch_visits)
+    move_total = int(end_min - stay_total - lunch_min)
 
     stops = []
     for order, (i, t) in enumerate(result):
@@ -185,12 +198,28 @@ def summarize_route(work, travel, modes, photos, result, total, start_hour, budg
         hh = start_hour + t / 60
         photo = photos.get(r["name"]) or {}
         desc = r["description"] if isinstance(r["description"], str) else ""
+
+        if order == 0:
+            stop_type = "start"
+        elif r["name"] == LUNCH_NAME:
+            stop_type = "meal"
+        else:
+            stop_type = "spot"
+
+        # 昼食は場所を特定しないため、表示上は直前の訪問地と同じ座標にする
+        # （移動時間の計算自体は全スポットの重心を仮の位置として行っている）
+        if stop_type == "meal" and stops:
+            lat, lon = stops[-1].lat, stops[-1].lon
+        else:
+            lat, lon = float(r["lat"]), float(r["lon"])
+
         stops.append(Stop(
             order=order,
             name=r["name"],
             area=r["area"],
-            lat=float(r["lat"]),
-            lon=float(r["lon"]),
+            type=stop_type,
+            lat=lat,
+            lon=lon,
             arrival_clock=clock_str(hh),
             arrival_min=int(t),
             stay_min=int(r["stay_min"]),
@@ -219,9 +248,10 @@ def summarize_route(work, travel, modes, photos, result, total, start_hour, budg
 
     summary = Summary(
         total_score=int(total),
-        visited_count=len(spots),
+        visited_count=len(spots_real),
         total_fee=int(total_fee),
         stay_total_min=int(stay_total),
+        lunch_min=int(lunch_min),
         move_total_min=move_total,
         end_min=int(end_min),
         end_clock=clock_str(end_hour),
@@ -230,9 +260,13 @@ def summarize_route(work, travel, modes, photos, result, total, start_hour, budg
     excluded = compute_excluded(work, travel, result, start_hour, budget_min, max_wait, summary.end_min)
     breakdown = compute_breakdown(work, travel, modes, result, total, summary)
 
+    needs_lunch = crosses_lunch(start_hour, budget_min)
+    lunch_note = LUNCH_NOT_INCLUDED_NOTE if (needs_lunch and not lunch_visits) else None
+
     return RouteResponse(
         stops=stops, segments=segments, summary=summary,
         excluded=excluded, excluded_note=EXCLUDED_NOTE, breakdown=breakdown,
+        lunch_note=lunch_note,
     )
 
 

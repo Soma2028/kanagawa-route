@@ -10,6 +10,7 @@ export const AREA_COLORS: Record<string, string> = {
   大町材木座: "#9e2b5b",
   その他: "#5a5a5a",
   起点: "#c0392b",
+  昼食: "#c9902e",
 };
 
 export const AREA_ICONS: Record<string, string> = {
@@ -21,6 +22,7 @@ export const AREA_ICONS: Record<string, string> = {
   西鎌倉: "🦊",
   大町材木座: "🏯",
   その他: "📍",
+  昼食: "🍱",
 };
 
 export function areaColor(area: string): string {

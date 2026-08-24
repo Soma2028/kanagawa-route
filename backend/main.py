@@ -63,7 +63,8 @@ app.add_middleware(
 @app.get("/api/areas", response_model=AreasResponse)
 def get_areas() -> AreasResponse:
     df = STATE["df"]
-    areas = sorted(df[df["area"] != "起点"]["area"].unique().tolist())
+    # 起点・昼食は選択可能な「行きたいエリア」ではないため除く
+    areas = sorted(df[~df["area"].isin(["起点", "昼食"])]["area"].unique().tolist())
     return AreasResponse(areas=areas)
 
 

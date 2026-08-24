@@ -68,6 +68,11 @@ export default function Home() {
 
           {route && (
             <div className="flex flex-col gap-6">
+              {route.lunch_note && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  {route.lunch_note}
+                </div>
+              )}
               <Timeline route={route} />
               <RouteBreakdown items={route.breakdown} />
               <RouteMap route={route} />
