@@ -5,15 +5,165 @@ build_route_response() 側でだけ solve() を呼ぶ。こう分けておくこ
 solve() を再実行して探索結果が変わる（GUIDED_LOCAL_SEARCH は時間切れ判定に依存するため
 同じ入力でも毎回同じ解になるとは限らない）ことの影響を受けずに、
 集計ロジックだけを app.py の元の計算と突き合わせて検証できる。
+
+excluded（外した候補）と breakdown（このルートの内訳）はどちらも、確定した
+result に対する事後的な後付け計算であり、optimize.solve() 自身が「理由」を
+返しているわけではない。特に excluded の extra_minutes は「このルートに
+そのまま追加した場合の試算」であって、他スポットとの入れ替えは考慮しないため
+「不採用の理由」の証明ではない（EXCLUDED_NOTE として明記し、API にも含める）。
 """
-from .schemas import RouteRequest, RouteResponse, Segment, Stop, Summary
+from .schemas import (
+    BreakdownItem,
+    ExcludedSpot,
+    RouteRequest,
+    RouteResponse,
+    Segment,
+    Stop,
+    Summary,
+)
+
+EXCLUDED_NOTE = (
+    "ここでの数値は「今回のルートにそのまま追加した場合」の試算です。"
+    "他のスポットとの入れ替えは考慮していないため、不採用の理由そのものではありません。"
+)
 
 
 def clock_str(hour_float: float) -> str:
     return f"{int(hour_float):02d}:{int((hour_float % 1) * 60):02d}"
 
 
-def summarize_route(work, travel, modes, photos, result, total, start_hour) -> RouteResponse:
+def _time_window(r, start_hour, budget_min):
+    """optimize.solve() と同じ式で拝観時間の枠（分, start_hour起点）を求める"""
+    open_min = max(0, int((r["open_hour"] - start_hour) * 60))
+    close_min = int((r["close_hour"] - start_hour) * 60) - int(r["stay_min"])
+    close_min = min(max(close_min, open_min), budget_min)
+    return open_min, close_min
+
+
+def compute_excluded(work, travel, result, start_hour, budget_min, max_wait, end_min):
+    """訪問しなかった各スポットについて、確定ルートへの挿入試算を行う"""
+    visited = {i for i, _ in result}
+    route_nodes = [i for i, _ in result]
+    route_times = [t for _, t in result]
+
+    # 挿入位置の候補: 各訪問区間 ＋ 最後の訪問地から起点への帰路
+    edges = [
+        (route_nodes[k], route_nodes[k + 1], route_times[k])
+        for k in range(len(route_nodes) - 1)
+    ]
+    edges.append((route_nodes[-1], 0, route_times[-1]))
+
+    remaining_slack = budget_min - end_min
+    excluded = []
+
+    for c in range(1, len(work)):
+        if c in visited:
+            continue
+        r = work.iloc[c]
+        open_min, close_min = _time_window(r, start_hour, budget_min)
+        stay_c = int(r["stay_min"])
+
+        feasible_extra = []
+        misses = []  # (超過幅, 最速到着分) : 拝観時間内に収まらない挿入位置
+        for edge_i, edge_j, t_i in edges:
+            stay_i = int(work.iloc[edge_i]["stay_min"])
+            earliest_arrival = t_i + stay_i + travel[edge_i, c]
+            if earliest_arrival > close_min:
+                misses.append((earliest_arrival - close_min, earliest_arrival))
+                continue
+            wait_needed = max(0, open_min - earliest_arrival)
+            if wait_needed > max_wait:
+                misses.append((open_min - max_wait - earliest_arrival, earliest_arrival))
+                continue
+            extra = travel[edge_i, c] + wait_needed + stay_c + travel[c, edge_j] - travel[edge_i, edge_j]
+            feasible_extra.append(extra)
+
+        if not feasible_extra:
+            _, earliest = min(misses, key=lambda m: m[0])
+            excluded.append(ExcludedSpot(
+                name=r["name"], area=r["area"], score=int(r["score"]),
+                status="closed", extra_minutes=0,
+                earliest_arrival=clock_str(start_hour + earliest / 60),
+                closes_at=clock_str(float(r["close_hour"])),
+            ))
+            continue
+
+        best_extra = min(feasible_extra)
+        if best_extra > remaining_slack:
+            excluded.append(ExcludedSpot(
+                name=r["name"], area=r["area"], score=int(r["score"]),
+                status="over_budget", extra_minutes=int(round(best_extra)),
+                shortfall_minutes=int(round(best_extra - remaining_slack)),
+            ))
+        else:
+            excluded.append(ExcludedSpot(
+                name=r["name"], area=r["area"], score=int(r["score"]),
+                status="fits", extra_minutes=int(round(best_extra)),
+            ))
+
+    return excluded
+
+
+def compute_breakdown(work, travel, modes, result, total, summary):
+    """このルートの内訳（事実の提示のみ、評価語や因果の主張は含まない）"""
+    from travel_time import walk_min
+
+    items = []
+
+    # 待機時間: 各区間で「到着時刻」と「待たずに着いた場合の時刻」の差を合計する
+    total_wait = 0.0
+    for k in range(1, len(result)):
+        i_prev, t_prev = result[k - 1]
+        i_cur, t_cur = result[k]
+        stay_prev = int(work.iloc[i_prev]["stay_min"])
+        expected = t_prev + stay_prev + travel[i_prev, i_cur]
+        total_wait += max(0.0, t_cur - expected)
+    items.append(BreakdownItem(
+        type="wait_time",
+        message=f"待機時間は合計{int(round(total_wait))}分です",
+    ))
+
+    # 鉄道利用: 鉄道区間ごとに「徒歩のみの場合との差」を合計する
+    rail_count = 0
+    rail_saved = 0.0
+    for k in range(len(result) - 1):
+        i, _ = result[k]
+        j, _ = result[k + 1]
+        if modes[i, j].startswith("鉄道"):
+            rail_count += 1
+            a, b = work.iloc[i], work.iloc[j]
+            only_walk = walk_min(a["lat"], a["lon"], b["lat"], b["lon"])
+            rail_saved += only_walk - travel[i, j]
+    if rail_count:
+        items.append(BreakdownItem(
+            type="rail_usage",
+            message=f"鉄道を{rail_count}区間で利用し、徒歩のみの場合より約{int(round(rail_saved))}分短い所要時間です",
+        ))
+    else:
+        items.append(BreakdownItem(type="rail_usage", message="全区間徒歩で移動しています"))
+
+    # 移動時間の比率
+    move_ratio = summary.move_total_min / summary.end_min * 100 if summary.end_min else 0.0
+    items.append(BreakdownItem(
+        type="move_ratio",
+        message=f"移動時間は総所要時間の{move_ratio:.0f}%です",
+    ))
+
+    # スコア達成率（エリア選好で減点済みの work を基準にする＝ソルバーが実際に最大化した対象）
+    all_score = int(work.iloc[1:]["score"].sum())
+    pct = total / all_score * 100 if all_score else 0.0
+    items.append(BreakdownItem(
+        type="score_rate",
+        message=(
+            f"全{len(work) - 1}スポット中{len(result) - 1}件、"
+            f"獲得可能スコアの{pct:.0f}%（{total}/{all_score}点）を達成しています"
+        ),
+    ))
+
+    return items
+
+
+def summarize_route(work, travel, modes, photos, result, total, start_hour, budget_min, max_wait) -> RouteResponse:
     spots = result[1:]                      # 起点を除いたスポット
     total_fee = sum(int(work.iloc[i]["fee"]) for i, _ in spots)
     last_i, last_t = result[-1]
@@ -69,7 +219,14 @@ def summarize_route(work, travel, modes, photos, result, total, start_hour) -> R
         end_min=int(end_min),
         end_clock=clock_str(end_hour),
     )
-    return RouteResponse(stops=stops, segments=segments, summary=summary)
+
+    excluded = compute_excluded(work, travel, result, start_hour, budget_min, max_wait, summary.end_min)
+    breakdown = compute_breakdown(work, travel, modes, result, total, summary)
+
+    return RouteResponse(
+        stops=stops, segments=segments, summary=summary,
+        excluded=excluded, excluded_note=EXCLUDED_NOTE, breakdown=breakdown,
+    )
 
 
 def build_route_response(df, travel, modes, photos, req: RouteRequest) -> RouteResponse | None:
@@ -80,10 +237,14 @@ def build_route_response(df, travel, modes, photos, req: RouteRequest) -> RouteR
     if req.areas:
         work.loc[~work["area"].isin(req.areas + ["起点"]), "score"] = 1
 
+    budget_min = int(req.budget_hours * 60)
     result, total = solve(
-        work, travel, int(req.budget_hours * 60), req.start_hour,
+        work, travel, budget_min, req.start_hour,
         search_sec=req.search_sec, max_wait=req.max_wait,
     )
     if result is None:
         return None
-    return summarize_route(work, travel, modes, photos, result, total, req.start_hour)
+    return summarize_route(
+        work, travel, modes, photos, result, total,
+        req.start_hour, budget_min, req.max_wait,
+    )

@@ -1,4 +1,6 @@
 """FastAPI のリクエスト/レスポンススキーマ"""
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -47,10 +49,32 @@ class Summary(BaseModel):
     end_clock: str
 
 
+class ExcludedSpot(BaseModel):
+    """訪問しなかったスポット。数値はすべて「今回のルートにそのまま追加した場合」の試算で、
+    他スポットとの入れ替えは考慮していない（= 不採用の理由の証明ではない）。"""
+    name: str
+    area: str
+    score: int
+    status: Literal["closed", "over_budget", "fits"]
+    extra_minutes: int
+    earliest_arrival: str | None = None   # status="closed" の場合のみ
+    closes_at: str | None = None          # status="closed" の場合のみ
+    shortfall_minutes: int | None = None  # status="over_budget" の場合のみ
+
+
+class BreakdownItem(BaseModel):
+    """このルートの内訳を示す事実ベースの1項目（評価語や因果の主張は含まない）"""
+    type: Literal["wait_time", "rail_usage", "move_ratio", "score_rate"]
+    message: str
+
+
 class RouteResponse(BaseModel):
     stops: list[Stop]
     segments: list[Segment]
     summary: Summary
+    excluded: list[ExcludedSpot]
+    excluded_note: str
+    breakdown: list[BreakdownItem]
 
 
 class AreasResponse(BaseModel):

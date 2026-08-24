@@ -55,7 +55,7 @@ def check_summary_arithmetic():
     assert result is not None, "解が見つかりませんでした（設定を確認してください）"
 
     expected = app_py_summary(df, travel, result, total, start_hour)
-    actual = summarize_route(df, travel, modes, {}, result, total, start_hour).summary.model_dump()
+    actual = summarize_route(df, travel, modes, {}, result, total, start_hour, 360, 60).summary.model_dump()
 
     mismatches = {k: (expected[k], actual[k]) for k in expected if expected[k] != actual[k]}
     if mismatches:
