@@ -2,7 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import ExcludedSpots from "@/components/ExcludedSpots";
 import Hero from "@/components/Hero";
+import RouteBreakdown from "@/components/RouteBreakdown";
 import SearchForm from "@/components/SearchForm";
 import Timeline from "@/components/Timeline";
 import { ApiError, fetchAreas, fetchRoute } from "@/lib/api";
@@ -68,7 +70,9 @@ export default function Home() {
           {route && (
             <div className="flex flex-col gap-6">
               <Timeline route={route} />
+              <RouteBreakdown items={route.breakdown} />
               <RouteMap route={route} />
+              <ExcludedSpots excluded={route.excluded} note={route.excluded_note} />
             </div>
           )}
         </main>

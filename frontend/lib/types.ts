@@ -44,10 +44,29 @@ export interface Summary {
   end_clock: string;
 }
 
+export interface ExcludedSpot {
+  name: string;
+  area: string;
+  score: number;
+  status: "closed" | "over_budget" | "fits";
+  extra_minutes: number;
+  earliest_arrival: string | null;
+  closes_at: string | null;
+  shortfall_minutes: number | null;
+}
+
+export interface BreakdownItem {
+  type: "wait_time" | "rail_usage" | "move_ratio" | "score_rate";
+  message: string;
+}
+
 export interface RouteResponse {
   stops: Stop[];
   segments: Segment[];
   summary: Summary;
+  excluded: ExcludedSpot[];
+  excluded_note: string;
+  breakdown: BreakdownItem[];
 }
 
 export interface AreasResponse {
