@@ -106,8 +106,6 @@ def compute_excluded(work, travel, result, start_hour, budget_min, max_wait, end
 
 def compute_breakdown(work, travel, modes, result, total, summary):
     """このルートの内訳（事実の提示のみ、評価語や因果の主張は含まない）"""
-    from travel_time import walk_min
-
     items = []
 
     # 待機時間: 各区間で「到着時刻」と「待たずに着いた場合の時刻」の差を合計する
@@ -123,21 +121,30 @@ def compute_breakdown(work, travel, modes, result, total, summary):
         message=f"待機時間は合計{int(round(total_wait))}分です",
     ))
 
-    # 鉄道利用: 鉄道区間ごとに「徒歩のみの場合との差」を合計する
+    # 鉄道利用: 実際に使った移動時間を鉄道区間/徒歩区間で内訳表示する
+    # （「全区間徒歩だったら」という仮定の比較はしない。迂回係数1.4での近似計算
+    # になるうえ、実際にはあり得ない前提のため、比較として意味を持たせにくい）
+    # 区間には最後の訪問地から起点への帰路も含める（summary.move_total_min と一致させるため）
+    edges = [(result[k][0], result[k + 1][0]) for k in range(len(result) - 1)]
+    edges.append((result[-1][0], 0))
+
     rail_count = 0
-    rail_saved = 0.0
-    for k in range(len(result) - 1):
-        i, _ = result[k]
-        j, _ = result[k + 1]
+    rail_minutes = 0.0
+    walk_minutes = 0.0
+    for i, j in edges:
         if modes[i, j].startswith("鉄道"):
             rail_count += 1
-            a, b = work.iloc[i], work.iloc[j]
-            only_walk = walk_min(a["lat"], a["lon"], b["lat"], b["lon"])
-            rail_saved += only_walk - travel[i, j]
+            rail_minutes += travel[i, j]
+        else:
+            walk_minutes += travel[i, j]
     if rail_count:
         items.append(BreakdownItem(
             type="rail_usage",
-            message=f"鉄道を{rail_count}区間で利用し、徒歩のみの場合より約{int(round(rail_saved))}分短い所要時間です",
+            message=(
+                f"移動時間{int(round(rail_minutes + walk_minutes))}分のうち、"
+                f"鉄道は{int(round(rail_minutes))}分、徒歩は{int(round(walk_minutes))}分です"
+                f"（鉄道利用は{rail_count}区間）"
+            ),
         ))
     else:
         items.append(BreakdownItem(type="rail_usage", message="全区間徒歩で移動しています"))

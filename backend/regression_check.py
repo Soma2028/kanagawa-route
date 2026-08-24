@@ -14,6 +14,7 @@
    （main.py の chdir 対応が効いているかの確認）。
 """
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -91,7 +92,18 @@ def check_api_smoke():
         assert summary["visited_count"] == len(visited)
         arrival_mins = [s["arrival_min"] for s in stops]
         assert arrival_mins == sorted(arrival_mins), "到着時刻が単調増加していません"
+
+        excluded, breakdown = body["excluded"], body["breakdown"]
+        assert len(excluded) + len(visited) == 34, "訪問+除外の合計がスポット総数と一致しません"
+        rail_item = next(b for b in breakdown if b["type"] == "rail_usage")
+        nums = [int(n) for n in re.findall(r"\d+", rail_item["message"])]
+        # 「移動時間{総}分のうち、鉄道は{鉄道}分、徒歩は{徒歩}分です（鉄道利用は{件数}区間）」
+        assert nums[0] == summary["move_total_min"], (
+            f"breakdownの移動時間内訳がsummary.move_total_minと不一致: {rail_item['message']}"
+        )
+        assert nums[1] + nums[2] == nums[0], f"鉄道+徒歩が合計と一致しません: {rail_item['message']}"
         print(f"  /api/route OK: 訪問{len(visited)}件 / スコア{summary['total_score']} / 帰着{summary['end_clock']}")
+        print(f"  excluded {len(excluded)}件 / breakdown 移動時間内訳の整合性 OK")
 
         r = client.post("/api/route", json={
             "start_hour": 9.0, "budget_hours": 0.5, "areas": [],
