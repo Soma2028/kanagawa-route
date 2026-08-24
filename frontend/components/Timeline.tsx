@@ -15,7 +15,7 @@ export default function Timeline({ route }: { route: RouteResponse }) {
   const { stops, segments } = route;
 
   return (
-    <div>
+    <div className="relative">
       <h2 className="mb-3 text-lg font-bold text-[#2c2c2c]">行程</h2>
       <div className="flex items-stretch gap-2 overflow-x-auto pb-3">
         {stops.map((stop, order) => {
@@ -25,21 +25,23 @@ export default function Timeline({ route }: { route: RouteResponse }) {
           return (
             <div key={stop.name + order} className="flex shrink-0 items-stretch gap-2">
               <div
-                className="w-56 shrink-0 rounded-[10px] border border-[#e0d9cc] bg-white p-3 shadow-sm"
+                className={
+                  order === 0
+                    ? "w-32 shrink-0 self-start rounded-[10px] border border-[#e0d9cc] bg-white p-3 shadow-sm"
+                    : "w-56 shrink-0 rounded-[10px] border border-[#e0d9cc] bg-white p-3 shadow-sm"
+                }
                 style={{ borderTop: `4px solid ${color}` }}
               >
                 {order === 0 ? (
                   <>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.8rem] font-bold text-white"
-                        style={{ background: color }}
-                      >
-                        S
-                      </span>
-                      <span className="text-[1rem] font-bold text-[#2c2c2c]">{stop.name}</span>
-                    </div>
-                    <div className="mt-1 text-[0.8rem] text-[#8a8a8a]">{stop.arrival_clock} 出発</div>
+                    <span
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.8rem] font-bold text-white"
+                      style={{ background: color }}
+                    >
+                      S
+                    </span>
+                    <div className="mt-1.5 text-[0.9rem] font-bold text-[#2c2c2c]">{stop.name}</div>
+                    <div className="mt-0.5 text-[0.75rem] text-[#8a8a8a]">{stop.arrival_clock} 出発</div>
                   </>
                 ) : (
                   <>
@@ -106,6 +108,9 @@ export default function Timeline({ route }: { route: RouteResponse }) {
           );
         })}
       </div>
+
+      {/* 右端に続きがあることを示すグラデーション（横スクロール可能なことのヒント） */}
+      <div className="pointer-events-none absolute top-9 right-0 bottom-3 w-10 bg-gradient-to-l from-[#faf7f0] to-transparent" />
     </div>
   );
 }

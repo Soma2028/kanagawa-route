@@ -44,7 +44,7 @@ export default function Home() {
       <Hero route={route} request={lastRequest} />
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
-        <aside>
+        <aside className="sticky top-4 self-start">
           <SearchForm areas={areas} loading={loading} onSubmit={handleSubmit} />
         </aside>
 
