@@ -1,6 +1,7 @@
 """鎌倉の周遊ルートを最適化して地図に表示するアプリ"""
 import folium
 import numpy as np
+import pandas as pd
 import streamlit as st
 from streamlit.components.v1 import html
 
@@ -76,6 +77,21 @@ st.markdown("""
     background: #f2ede3; border: 1px solid #e0d9cc; color: #4a4a4a;
 }
 .badge-area { color: #fff; border: none; }
+.spot-photo {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+.photo-credit {
+    font-size: 0.68rem;
+    color: #a0a0a0;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .spot-desc {
     margin-top: 10px;
     font-size: 0.85rem;
@@ -101,6 +117,12 @@ st.title("⛩️ 鎌倉 周遊ルート最適化")
 st.caption("持ち時間と好みに合わせて、満足度が最大になる順路を提案します")
 
 df, travel, modes = load_data()
+
+# 画像情報を読み込んでスポット名で引けるようにする
+try:
+    photos = pd.read_csv("photos_selected.csv").set_index("name").to_dict("index")
+except FileNotFoundError:
+    photos = {}
 
 # ---- サイドバー: 検索条件 ----
 with st.sidebar:
@@ -203,6 +225,17 @@ with left:
                 f'<span class="badge">{fee}</span>'
             )
             desc = r["description"] if isinstance(r["description"], str) else ""
+
+            # 画像とクレジット（ライセンス条件を満たすため作者名を併記する）
+            photo = photos.get(r["name"])
+            photo_html = ""
+            if photo and isinstance(photo.get("photo_url"), str):
+                credit = f'{photo["photo_artist"]} / {photo["photo_license"]}'
+                photo_html = (
+                    f'<img src="{photo["photo_url"]}" class="spot-photo">'
+                    f'<div class="photo-credit">{credit[:70]}</div>'
+                )
+
             st.markdown(
                 f'<div class="spot-card" style="border-left:4px solid {color}">'
                 f'<div class="spot-head">'
@@ -214,6 +247,7 @@ with left:
                 f'{stars(score)} <span style="color:#8a8a8a;font-size:0.8rem">'
                 f'スコア {score}</span></div>'
                 f'<div class="badges">{badges}</div>'
+                + photo_html
                 + (f'<div class="spot-desc">{desc}</div>' if desc else "")
                 + f'</div>',
                 unsafe_allow_html=True,
@@ -305,3 +339,18 @@ with right:
     )
     st.markdown(legend, unsafe_allow_html=True)
     st.caption("実線＝徒歩 / オレンジの破線＝電車")
+
+# ---- 画像の出典表示 ----
+used = [work.iloc[i]["name"] for i, _ in spots
+        if work.iloc[i]["name"] in photos]
+if used:
+    with st.expander("画像の出典"):
+        st.caption("画像はすべて Wikimedia Commons より。"
+                   "各ライセンスの条件に従って利用しています。")
+        for name in used:
+            p = photos[name]
+            st.markdown(
+                f"- **{name}**: {p['photo_file']} / "
+                f"{p['photo_artist']} / "
+                f"[{p['photo_license']}]({p['photo_license_url']})"
+            )
