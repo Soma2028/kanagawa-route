@@ -2,8 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import Hero from "@/components/Hero";
 import SearchForm from "@/components/SearchForm";
-import SummaryCards from "@/components/SummaryCards";
 import Timeline from "@/components/Timeline";
 import { ApiError, fetchAreas, fetchRoute } from "@/lib/api";
 import type { RouteRequest, RouteResponse } from "@/lib/types";
@@ -14,6 +14,7 @@ const RouteMap = dynamic(() => import("@/components/RouteMap"), { ssr: false });
 export default function Home() {
   const [areas, setAreas] = useState<string[]>([]);
   const [route, setRoute] = useState<RouteResponse | null>(null);
+  const [lastRequest, setLastRequest] = useState<RouteRequest | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +25,7 @@ export default function Home() {
   }, []);
 
   async function handleSubmit(req: RouteRequest) {
+    setLastRequest(req);
     setLoading(true);
     setError(null);
     try {
@@ -39,12 +41,9 @@ export default function Home() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <h1 className="text-2xl font-bold text-[#2c2c2c]">⛩️ 鎌倉 周遊ルート最適化</h1>
-      <p className="mb-6 text-sm text-[#6b6b6b]">
-        持ち時間と好みに合わせて、満足度が最大になる順路を提案します
-      </p>
+      <Hero route={route} request={lastRequest} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
         <aside>
           <SearchForm areas={areas} loading={loading} onSubmit={handleSubmit} />
         </aside>
@@ -67,12 +66,9 @@ export default function Home() {
           )}
 
           {route && (
-            <div className="flex flex-col gap-6">
-              <SummaryCards summary={route.summary} />
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <Timeline route={route} />
-                <RouteMap route={route} />
-              </div>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <Timeline route={route} />
+              <RouteMap route={route} />
             </div>
           )}
         </main>
