@@ -51,7 +51,7 @@ export default function Home() {
           <SearchForm areas={areas} loading={loading} onSubmit={handleSubmit} />
         </aside>
 
-        <main>
+        <main className="min-w-0">
           {error && (
             <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               {error}

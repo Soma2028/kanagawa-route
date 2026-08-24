@@ -9,9 +9,11 @@ const ICONS: Record<BreakdownItem["type"], string> = {
 
 export default function RouteBreakdown({ items }: { items: BreakdownItem[] }) {
   return (
-    <div className="rounded-xl border border-[#e0d9cc] bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-lg font-bold text-[#2c2c2c]">このルートの内訳</h2>
-      <ul className="flex flex-col gap-2">
+    <details className="rounded-xl border border-[#e0d9cc] bg-white p-4 shadow-sm">
+      <summary className="cursor-pointer text-lg font-bold text-[#2c2c2c]">
+        このルートの内訳
+      </summary>
+      <ul className="mt-3 flex flex-col gap-2">
         {items.map((item) => (
           <li key={item.type} className="flex items-start gap-2 text-sm text-[#4a4a4a]">
             <span aria-hidden>{ICONS[item.type]}</span>
@@ -19,6 +21,6 @@ export default function RouteBreakdown({ items }: { items: BreakdownItem[] }) {
           </li>
         ))}
       </ul>
-    </div>
+    </details>
   );
 }

@@ -25,8 +25,8 @@ export default function ExcludedSpots({
   const sorted = [...excluded].sort((a, b) => b.score - a.score);
 
   return (
-    <div className="rounded-xl border border-[#e0d9cc] bg-white p-4 shadow-sm">
-      <h2 className="text-lg font-bold text-[#2c2c2c]">外した候補</h2>
+    <details className="rounded-xl border border-[#e0d9cc] bg-white p-4 shadow-sm">
+      <summary className="cursor-pointer text-lg font-bold text-[#2c2c2c]">外した候補</summary>
       <p className="mt-1 text-xs text-[#8a8a8a]">{note}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {sorted.map((e) => (
@@ -46,6 +46,6 @@ export default function ExcludedSpots({
           </div>
         ))}
       </div>
-    </div>
+    </details>
   );
 }
