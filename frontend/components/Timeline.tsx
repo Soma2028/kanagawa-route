@@ -30,7 +30,11 @@ export default function Timeline({ route }: { route: RouteResponse }) {
                     ? "w-32 shrink-0 self-start rounded-[10px] border border-[#e0d9cc] bg-white p-3 shadow-sm"
                     : "w-56 shrink-0 rounded-[10px] border border-[#e0d9cc] bg-white p-3 shadow-sm"
                 }
-                style={{ borderTop: `4px solid ${color}` }}
+                style={{
+                  borderTop: `4px solid ${color}`,
+                  animation: "card-fade-in 0.35s ease-out both",
+                  animationDelay: `${order * 40}ms`,
+                }}
               >
                 {order === 0 ? (
                   <>

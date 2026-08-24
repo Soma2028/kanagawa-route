@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import ExcludedSpots from "@/components/ExcludedSpots";
 import Hero from "@/components/Hero";
+import LoadingMessage from "@/components/LoadingMessage";
 import RouteBreakdown from "@/components/RouteBreakdown";
 import SearchForm from "@/components/SearchForm";
 import Timeline from "@/components/Timeline";
@@ -63,9 +64,7 @@ export default function Home() {
             </div>
           )}
 
-          {loading && (
-            <div className="mb-4 text-sm text-[#6b6b6b]">最適なルートを探しています...</div>
-          )}
+          {loading && <LoadingMessage />}
 
           {route && (
             <div className="flex flex-col gap-6">

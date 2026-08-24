@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import type { RouteRequest, RouteResponse } from "@/lib/types";
 import { areaColor } from "@/lib/areaStyles";
+import { useCountUp } from "@/lib/useCountUp";
 
 interface Props {
   route: RouteResponse | null;
@@ -30,11 +31,22 @@ function useToday(): string | null {
   return useSyncExternalStore(subscribeNoop, formatToday, () => null);
 }
 
-function HeroStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function HeroStat({
+  label,
+  target,
+  format,
+  sub,
+}: {
+  label: string;
+  target: number;
+  format: (value: number) => string;
+  sub?: string;
+}) {
+  const value = useCountUp(target);
   return (
     <div className="rounded-xl bg-black/20 px-4 py-2.5">
       <div className="text-xs text-white/90">{label}</div>
-      <div className="text-2xl font-bold text-white">{value}</div>
+      <div className="text-2xl font-bold text-white">{format(value)}</div>
       {sub && <div className="mt-0.5 text-xs text-white/90">{sub}</div>}
     </div>
   );
@@ -76,17 +88,20 @@ export default function Hero({ route, request }: Props) {
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
           <HeroStat
             label="満足度スコア"
-            value={`${route.summary.total_score}`}
+            target={route.summary.total_score}
+            format={(v) => `${Math.round(v)}`}
             sub={`訪問 ${route.summary.visited_count}件`}
           />
           <HeroStat
             label="所要時間"
-            value={`${(route.summary.end_min / 60).toFixed(1)}時間`}
+            target={route.summary.end_min / 60}
+            format={(v) => `${v.toFixed(1)}時間`}
             sub={`移動 ${route.summary.move_total_min}分 / 滞在 ${route.summary.stay_total_min}分`}
           />
           <HeroStat
             label="拝観料合計"
-            value={`¥${route.summary.total_fee.toLocaleString()}`}
+            target={route.summary.total_fee}
+            format={(v) => `¥${Math.round(v).toLocaleString()}`}
           />
         </div>
       )}
