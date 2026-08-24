@@ -1,7 +1,14 @@
 # 鎌倉 周遊ルート最適化アプリ
-https://kanagawa-route-flzm2vvc9dyvur4cd2sxsw.streamlit.app/
+
+- フロントエンド: https://kanagawa-route.vercel.app/
+- バックエンドAPI: https://kanagawa-route-api.onrender.com
+
 持ち時間と好みを入力すると、拝観時間の制約を守りつつ満足度が最大になる
 鎌倉観光の順路を提案する Web アプリ。
+
+もともと Streamlit の単一アプリだったが、FastAPI（バックエンド）と
+Next.js（フロントエンド）に分離した構成に移行した。最適化ロジック本体
+（`optimize.py` / `travel_time.py`）は移行の前後で変更していない。
 
 ## 課題設定
 
@@ -18,9 +25,13 @@ https://kanagawa-route-flzm2vvc9dyvur4cd2sxsw.streamlit.app/
 | 領域 | 使用技術 |
 |---|---|
 | 最適化 | OR-Tools Routing (GUIDED_LOCAL_SEARCH) |
-| データ取得 | Overpass API, Nominatim |
-| UI | Streamlit, folium |
-| 環境管理 | uv |
+| バックエンドAPI | FastAPI |
+| フロントエンド | Next.js (App Router), react-leaflet |
+| データ取得 | Overpass API, Nominatim, OpenRouteService |
+| 環境管理 | uv (Python), npm (Next.js) |
+| デプロイ | Render (API) / Vercel (フロントエンド) |
+
+画像選定用の内部ツール（`select_photos.py`）のみ、移行後もStreamlitを使い続けている。
 
 ## データ整備
 
@@ -52,6 +63,21 @@ Overpass API で鎌倉エリアを取得したところ **723件**。しかし�
 - 出発地→最寄駅（徒歩）+ 待ち時間 + 駅間乗車 + 到着駅→目的地（徒歩）
 
 結果、同区間は **73.6分** となり、平均移動時間も 48.0分 → 33.3分 に改善した。
+
+### 直線距離近似の検証（ORS実測との比較）
+
+上記の徒歩時間はまだ直線距離からの近似だったため、OpenRouteService (ORS) で
+全スポット間の徒歩所要時間を実測し、`compare_matrix.py` で近似値と突き合わせた
+（561区間、`matrix_comparison.csv`）。
+
+- 相関係数: **0.977**（傾向としては近似も悪くない）
+- 平均誤差: **+10.5分**（近似は実測より系統的に過大）
+- 現行の迂回係数1.4に対し、実測に最も適合する係数は **1.09**
+
+迂回係数を調整するのではなく、**スポット間の徒歩時間はORS実測値をそのまま
+採用**する方針にした（`travel_time.py` の `build_matrix`）。直線距離近似は、
+実測行列に含まれない区間（起点⇔スポット、最寄駅までの徒歩など）を補う
+フォールバックとしてのみ残している。
 
 ## 最適化で直面した問題
 
@@ -97,32 +123,69 @@ Routing 移行後、省略ペナルティ係数を 100 / 300 / 1000 の3水準�
 訪問数は減ったが満足度は向上。「数は少なくても価値の高いスポットを回る」
 という意図した挙動になり、ルートも実際の観光動線に沿ったものになった。
 
+## デプロイで直面した問題
+
+### .gitignore が frontend/lib を除外していた
+
+ルートの `.gitignore` はPythonパッケージング成果物向けに `lib/` / `lib64/` を
+含んでいたが、先頭に `/` が無かったため、意図せず `frontend/lib/` にも
+マッチしていた。結果として `frontend/lib` 配下（`api.ts` / `types.ts` /
+`areaStyles.ts` / `markerOffset.ts`）が最初のコミットから一度も追跡されて
+おらず、Vercelのビルドが `Module not found` で失敗した。`components` は
+たまたまどの除外パターンにも一致しなかったため、そちらは気づかれずに
+デプロイできてしまっていた。`/lib/` `/lib64/` とリポジトリ直下限定に
+修正して解決。
+
+### 本番とローカルで探索結果にスコア差が出る
+
+同一条件（出発9:00・持ち時間6時間・計算時間5秒・待機60分）で比較したところ、
+ローカルは5回中5回とも合計スコア59、Render無料枠は5回中5回とも57と、
+それぞれの環境内では安定しているが環境間で差が出た。計算時間を30秒に
+延ばすと 59→60（ローカル）、57→59（Render）といずれも改善し、差は1点に
+縮まった。
+
+`GUIDED_LOCAL_SEARCH` は時間制限付きの探索なので、Render無料枠のCPU制約
+（0.1 CPU）で同じ5秒でも実行できる反復回数が減っている可能性が高いと
+見ているが、**確証はない**（OS/CPUアーキテクチャの違いによる浮動小数点
+演算差など、他の要因も排除できていない）。継続調査中の項目として扱う。
+
 ## 実行方法
 
 ```bash
+# バックエンド（FastAPI）
 uv sync
-uv run streamlit run app.py
+uv run uvicorn backend.main:app --reload
+
+# フロントエンド（別ターミナルで）
+cd frontend
+npm install
+npm run dev
 ```
 
 ## ファイル構成
 
-| ファイル | 役割 |
+| ファイル/ディレクトリ | 役割 |
 |---|---|
 | `fetch_spots.py` | Overpass API からスポット取得 |
 | `filter_spots.py` | カテゴリによる絞り込み |
 | `fetch_coords.py` | Nominatim で座標取得、マスタ雛形生成 |
-| `travel_time.py` | 徒歩＋鉄道の移動時間行列を構築 |
+| `fetch_walk_matrix.py` | ORS で徒歩実測行列を取得 |
+| `compare_matrix.py` | 直線距離近似とORS実測値の比較検証 |
+| `travel_time.py` | 徒歩実測＋鉄道の移動時間行列を構築 |
 | `optimize.py` | Routing による経路最適化 |
 | `optimize_cpsat.py` | CP-SAT 版（比較用に保存） |
-| `app.py` | Streamlit UI |
+| `backend/` | FastAPI バックエンド（`optimize.py`/`travel_time.py`をそのまま利用） |
+| `frontend/` | Next.js フロントエンド |
+| `app.py` | 旧UI（Streamlit版、参考用に残置） |
+| `fetch_photos.py` / `select_photos.py` | Wikimedia Commonsからの画像選定 |
 
 ## 今後の課題
 
-- 移動時間を OpenRouteService の実測値に置き換える
-- 鉄道区間を地図上で区別して描画する（現状は直線のため往復が非効率に見える）
 - 滞在時間・満足度スコアを属性から推定するモデルの導入
 - 他エリア（横浜みなとみらい、箱根など）への展開
+- 本番とローカルのスコア差の原因（CPU性能差か、それ以外か）を系統的に検証する
 
 ## データ出典
 
 - OpenStreetMap contributors（Overpass API / Nominatim）
+- OpenRouteService（徒歩移動時間の実測値）
