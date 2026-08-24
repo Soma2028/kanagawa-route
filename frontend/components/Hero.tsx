@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import type { RouteRequest, RouteResponse } from "@/lib/types";
 import { areaColor } from "@/lib/areaStyles";
 
@@ -18,13 +18,16 @@ function formatToday(): string {
   });
 }
 
-/** 静的プリレンダー時にビルド日が固定表示されるのを避けるため、マウント後にのみ描画する */
+function subscribeNoop() {
+  return () => {};
+}
+
+/**
+ * 静的プリレンダー時にビルド日が固定表示されるのを避けるため、クライアントでの
+ * 描画時にのみ日付を返す（サーバー/初回描画は null、以降は formatToday()）。
+ */
 function useToday(): string | null {
-  const [today, setToday] = useState<string | null>(null);
-  useEffect(() => {
-    setToday(formatToday());
-  }, []);
-  return today;
+  return useSyncExternalStore(subscribeNoop, formatToday, () => null);
 }
 
 function HeroStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
