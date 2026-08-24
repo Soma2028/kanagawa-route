@@ -48,10 +48,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="kanagawa-route API", lifespan=lifespan)
 
-# 開発中の Next.js (localhost:3000) からのアクセスを許可する
+# ローカル開発 (localhost:3000) と、Vercelにデプロイした本番/プレビュー環境
+# (*.vercel.app) からのアクセスを許可する。認証・Cookieを使わない公開APIのため
+# 個別ドメインを都度登録する必要がなく、プレビューデプロイのURLもこれで自動的に通る。
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )

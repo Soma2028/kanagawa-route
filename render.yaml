@@ -1,0 +1,19 @@
+# Render Blueprint: バックエンド(FastAPI)のみを定義する。
+# フロントエンド(frontend/)はVercelにデプロイするため、ここには含めない。
+#
+# RenderのネイティブPythonランタイムが3.14に確実に対応しているか
+# ドキュメント上で確証が持てなかったため(参照元によって記述が矛盾していた)、
+# Dockerビルドに切り替えている。Pythonバージョンはリポジトリ直下の
+# Dockerfile 側で明示的に固定している（uv公式イメージの python3.14-trixie-slim）。
+#
+# rootDir はあえて指定しない（＝リポジトリ直下がビルド時のDockerコンテキストになる）。
+# pyproject.toml / uv.lock / spots_master.csv 等はすべてリポジトリ直下にあるため。
+services:
+  - type: web
+    name: kanagawa-route-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/areas
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
