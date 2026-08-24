@@ -71,7 +71,7 @@ def check_summary_arithmetic():
     assert result is not None, "解が見つかりませんでした（設定を確認してください）"
 
     expected = reference_summary(df, travel, result, total, start_hour)
-    actual = summarize_route(df, travel, modes, {}, result, total, start_hour, 360, 60).summary.model_dump()
+    actual = summarize_route(df, travel, modes, {}, {}, result, total, start_hour, 360, 60).summary.model_dump()
 
     mismatches = {k: (expected[k], actual[k]) for k in expected if expected[k] != actual[k]}
     if mismatches:
@@ -98,7 +98,7 @@ def check_lunch_skipped_when_infeasible():
     from optimize import LUNCH_NAME
     assert all(df.iloc[i]["name"] != LUNCH_NAME for i, _ in result), "極端に短いのに昼食が入っています"
 
-    summarized = summarize_route(df, travel, modes, {}, result, total, start_hour, budget_min, 0)
+    summarized = summarize_route(df, travel, modes, {}, {}, result, total, start_hour, budget_min, 0)
     assert summarized.summary.lunch_min == 0
     assert summarized.lunch_note, "昼食が入らなかったのにlunch_noteが空です"
     print(f"  OK: 昼食を諦めて解けました（{summarized.lunch_note}）")

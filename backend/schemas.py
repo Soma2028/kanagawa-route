@@ -38,6 +38,7 @@ class Segment(BaseModel):
     mode: str          # "徒歩" | "鉄道"
     detail: str | None  # 鉄道の場合の "始発駅→終着駅"
     minutes: int
+    geometry: list[tuple[float, float]] | None = None  # [(lat,lon), ...] 経路の経由点。無ければ直線で描画
 
 
 class Summary(BaseModel):

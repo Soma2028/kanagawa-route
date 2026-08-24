@@ -36,6 +36,42 @@ def clock_str(hour_float: float) -> str:
     return f"{int(hour_float):02d}:{int((hour_float % 1) * 60):02d}"
 
 
+def _rail_geometry(from_lat, from_lon, to_lat, to_lon, detail):
+    """鉄道区間の経由点を「出発地→最寄駅→(鎌倉駅→)到着駅→到着地」の折れ線で組み立てる
+
+    実際の線路データは使わず、既存の駅座標(travel_time.STATIONS)だけで近似する。
+    """
+    from travel_time import STATIONS, STATION_LINES
+
+    st_a, st_b = detail.split("→")
+    points = [(from_lat, from_lon), STATIONS[st_a]]
+
+    same_line = STATION_LINES[st_a] == STATION_LINES[st_b]
+    via_kamakura_endpoint = st_a == "鎌倉" or st_b == "鎌倉"
+    if not (same_line or via_kamakura_endpoint):
+        points.append(STATIONS["鎌倉"])  # 路線が異なる場合は鎌倉駅を経由点に挟む
+
+    points.append(STATIONS[st_b])
+    points.append((to_lat, to_lon))
+    return points
+
+
+def _walk_geometry(walk_geometry_cache, name_a, name_b):
+    """事前取得した徒歩経路のキャッシュから、進行方向に合わせた点列を返す
+
+    キーはスポット名をソートした順（"A|B"）で保存されているため、逆方向の場合は
+    点列を反転する。起点・昼食ノードなど、キャッシュにないペアは None を返し、
+    呼び出し側で直線にフォールバックさせる。
+    """
+    if not walk_geometry_cache:
+        return None
+    lo, hi = sorted([name_a, name_b])
+    points = walk_geometry_cache.get(f"{lo}|{hi}")
+    if points is None:
+        return None
+    return points if name_a == lo else list(reversed(points))
+
+
 def _time_window(r, start_hour, budget_min):
     """optimize.solve() と同じ式で拝観時間の枠（分, start_hour起点）を求める"""
     open_min = max(0, int((r["open_hour"] - start_hour) * 60))
@@ -183,7 +219,7 @@ def compute_breakdown(work, travel, modes, result, total, summary):
     return items
 
 
-def summarize_route(work, travel, modes, photos, result, total, start_hour, budget_min, max_wait) -> RouteResponse:
+def summarize_route(work, travel, modes, photos, walk_geometry, result, total, start_hour, budget_min, max_wait) -> RouteResponse:
     spots = result[1:]                      # 起点を除いたスポット・昼食
     spots_real = [(i, t) for i, t in spots if work.iloc[i]["name"] != LUNCH_NAME]
     lunch_visits = [(i, t) for i, t in spots if work.iloc[i]["name"] == LUNCH_NAME]
@@ -246,12 +282,16 @@ def summarize_route(work, travel, modes, photos, result, total, start_hour, budg
         j, _ = result[order + 1]
         raw = modes[i, j]
         mins = int(round(travel[i, j]))
+        from_stop, to_stop = stops[order], stops[order + 1]
         if raw.startswith("鉄道"):
             mode, detail = "鉄道", raw.split(":", 1)[1]
+            geometry = _rail_geometry(from_stop.lat, from_stop.lon, to_stop.lat, to_stop.lon, detail)
         else:
             mode, detail = "徒歩", None
+            geometry = _walk_geometry(walk_geometry, from_stop.name, to_stop.name)
         segments.append(Segment(
             from_index=order, to_index=order + 1, mode=mode, detail=detail, minutes=mins,
+            geometry=geometry,
         ))
 
     summary = Summary(
@@ -278,7 +318,7 @@ def summarize_route(work, travel, modes, photos, result, total, start_hour, budg
     )
 
 
-def build_route_response(df, travel, modes, photos, req: RouteRequest) -> RouteResponse | None:
+def build_route_response(df, travel, modes, photos, walk_geometry, req: RouteRequest) -> RouteResponse | None:
     from optimize import solve
 
     # エリア選択を好みとしてスコアに反映する（app.py と同じロジック）
@@ -294,6 +334,6 @@ def build_route_response(df, travel, modes, photos, req: RouteRequest) -> RouteR
     if result is None:
         return None
     return summarize_route(
-        work, travel, modes, photos, result, total,
+        work, travel, modes, photos, walk_geometry, result, total,
         req.start_hour, budget_min, req.max_wait,
     )

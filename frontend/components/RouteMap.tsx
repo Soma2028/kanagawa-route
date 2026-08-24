@@ -55,7 +55,7 @@ export default function RouteMap({ route }: { route: RouteResponse }) {
           {segments.map((seg, i) => (
             <Polyline
               key={i}
-              positions={[rawPositions[seg.from_index], rawPositions[seg.to_index]]}
+              positions={seg.geometry ?? [rawPositions[seg.from_index], rawPositions[seg.to_index]]}
               pathOptions={
                 seg.mode === "鉄道"
                   ? { color: "#ff9800", weight: 3, opacity: 0.9, dashArray: "8, 8" }

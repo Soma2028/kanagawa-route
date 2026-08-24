@@ -33,6 +33,7 @@ export interface Segment {
   mode: "徒歩" | "鉄道";
   detail: string | null;
   minutes: number;
+  geometry: [number, number][] | null; // [lat, lon] の経由点。無ければ直線で描画
 }
 
 export interface Summary {

@@ -15,6 +15,8 @@ if str(REPO_ROOT) not in sys.path:
 if Path.cwd() != REPO_ROOT:
     os.chdir(REPO_ROOT)
 
+import json
+
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,7 +43,12 @@ async def lifespan(app: FastAPI):
         }
     except FileNotFoundError:
         photos = {}
-    STATE.update(df=df, travel=travel, modes=modes, photos=photos)
+    try:
+        with open("walk_geometry.json", encoding="utf-8") as f:
+            walk_geometry = json.load(f)
+    except FileNotFoundError:
+        walk_geometry = {}
+    STATE.update(df=df, travel=travel, modes=modes, photos=photos, walk_geometry=walk_geometry)
     yield
     STATE.clear()
 
@@ -70,7 +77,9 @@ def get_areas() -> AreasResponse:
 
 @app.post("/api/route", response_model=RouteResponse)
 def post_route(req: RouteRequest) -> RouteResponse:
-    result = build_route_response(STATE["df"], STATE["travel"], STATE["modes"], STATE["photos"], req)
+    result = build_route_response(
+        STATE["df"], STATE["travel"], STATE["modes"], STATE["photos"], STATE["walk_geometry"], req,
+    )
     if result is None:
         raise HTTPException(status_code=422, detail="条件に合うルートが見つかりませんでした")
     return result

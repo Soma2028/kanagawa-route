@@ -48,10 +48,13 @@ def load_data():
     # 各スポットの最寄駅を先に求めておく
     stations = [nearest_station(r["lat"], r["lon"]) for _, r in df.iterrows()]
 
-    # 既存区間について、徒歩より速ければ鉄道利用と判定する
+    # 既存区間について、徒歩より速ければ鉄道利用と判定する（最寄駅が同じ場合は
+    # そもそも乗る意味がなく、travel_matrix.csv の値も徒歩のままのはずなので除外する。
+    # これが無いと、同じ最寄駅を持つ2スポット間が「鉄道:北鎌倉→北鎌倉」のように
+    # 誤ってラベル付けされていた）
     for i in range(1, n):
         for j in range(1, n):
-            if i == j:
+            if i == j or stations[i][0] == stations[j][0]:
                 continue
             a, b = df.iloc[i], df.iloc[j]
             only_walk = walk_min(a["lat"], a["lon"], b["lat"], b["lon"])
