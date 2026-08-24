@@ -134,21 +134,25 @@ def compute_breakdown(work, travel, modes, result, total, summary):
     edges = [(result[k][0], result[k + 1][0]) for k in range(len(result) - 1)]
     edges.append((result[-1][0], 0))
 
+    # summary.move_total_min（区間ごとに int(round()) した値の積み上げ）と
+    # 一致させるため、ここでも生の浮動小数点値ではなく区間ごとに丸めてから合計する
     rail_count = 0
-    rail_minutes = 0.0
-    walk_minutes = 0.0
+    rail_int = 0
+    walk_int = 0
     for i, j in edges:
+        mins = int(round(travel[i, j]))
         if modes[i, j].startswith("鉄道"):
             rail_count += 1
-            rail_minutes += travel[i, j]
+            rail_int += mins
         else:
-            walk_minutes += travel[i, j]
+            walk_int += mins
     if rail_count:
+        total_int = rail_int + walk_int
         items.append(BreakdownItem(
             type="rail_usage",
             message=(
-                f"移動時間{int(round(rail_minutes + walk_minutes))}分のうち、"
-                f"鉄道は{int(round(rail_minutes))}分、徒歩は{int(round(walk_minutes))}分です"
+                f"移動時間{total_int}分のうち、"
+                f"鉄道は{rail_int}分、徒歩は{walk_int}分です"
                 f"（鉄道利用は{rail_count}区間）"
             ),
         ))
@@ -186,7 +190,11 @@ def summarize_route(work, travel, modes, photos, result, total, start_hour, budg
 
     total_fee = sum(int(work.iloc[i]["fee"]) for i, _ in spots_real)
     last_i, last_t = result[-1]
-    end_min = last_t + int(work.iloc[last_i]["stay_min"]) + travel[last_i, 0]
+    # 道中の区間はソルバー内部で int(round()) された整数分で積み上がっている
+    # （time_callback参照）ため、最後の帰路区間もここで同じ丸め方にしないと、
+    # compute_breakdown 側の区間合計（同じくint(round())で積み上げる）と
+    # 端数のずれが生じる
+    end_min = last_t + int(work.iloc[last_i]["stay_min"]) + int(round(travel[last_i, 0]))
     end_hour = start_hour + end_min / 60
     stay_total = sum(int(work.iloc[i]["stay_min"]) for i, _ in spots_real)
     lunch_min = sum(int(work.iloc[i]["stay_min"]) for i, _ in lunch_visits)

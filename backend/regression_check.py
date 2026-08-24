@@ -44,7 +44,9 @@ def reference_summary(work, travel, result, total, start_hour):
 
     total_fee = sum(int(work.iloc[i]["fee"]) for i, _ in spots_real)
     last_i, last_t = result[-1]
-    end_min = last_t + int(work.iloc[last_i]["stay_min"]) + travel[last_i, 0]
+    # summarize_route() と同じく、最後の帰路区間も int(round()) で丸める
+    # （道中の区間はソルバー内部で既に整数分で積み上がっているため）
+    end_min = last_t + int(work.iloc[last_i]["stay_min"]) + int(round(travel[last_i, 0]))
     end_hour = start_hour + end_min / 60
     stay_total = sum(int(work.iloc[i]["stay_min"]) for i, _ in spots_real)
     lunch_min = sum(int(work.iloc[i]["stay_min"]) for i, _ in lunch_visits)
