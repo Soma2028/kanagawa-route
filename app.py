@@ -6,6 +6,7 @@ import streamlit as st
 from streamlit.components.v1 import html
 
 from optimize import load_data, solve
+from travel_time import rail_label
 
 st.set_page_config(page_title="鎌倉ルート最適化", page_icon="⛩️", layout="wide")
 
@@ -267,7 +268,8 @@ with left:
             raw = modes[i, j]
             mins = int(round(travel[i, j]))
             if raw.startswith("鉄道"):
-                label = f"🚃 {raw.split(':')[1]} {mins}分"
+                st_a, st_b = raw.split(":", 1)[1].split("→")
+                label = f"🚃 {rail_label(st_a, st_b)} {mins}分"
             else:
                 label = f"🚶 徒歩 {mins}分"
             st.markdown(

@@ -1,4 +1,4 @@
-import type { AreasResponse, RouteRequest, RouteResponse } from "./types";
+import type { AreasResponse, RouteRequest, RouteResponse, SpotsResponse, SpotSummary } from "./types";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -10,6 +10,13 @@ export async function fetchAreas(): Promise<string[]> {
   if (!res.ok) throw new ApiError("エリア一覧の取得に失敗しました");
   const body = (await res.json()) as AreasResponse;
   return body.areas;
+}
+
+export async function fetchSpots(): Promise<SpotSummary[]> {
+  const res = await fetch(`${API_BASE_URL}/api/spots`);
+  if (!res.ok) throw new ApiError("スポット一覧の取得に失敗しました");
+  const body = (await res.json()) as SpotsResponse;
+  return body.spots;
 }
 
 export async function fetchRoute(req: RouteRequest): Promise<RouteResponse> {

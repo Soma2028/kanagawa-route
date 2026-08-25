@@ -67,6 +67,9 @@ export default function Hero({ route, request }: Props) {
   const today = useToday();
   const startClock = route?.stops[0]?.arrival_clock;
   const endClock = route?.summary.end_clock;
+  const visitedAreas = route
+    ? new Set(route.stops.filter((s) => s.type === "spot").map((s) => s.area)).size
+    : 0;
 
   return (
     <section className="rounded-2xl bg-[#3d7a6f] px-5 py-4 sm:px-8 sm:py-5">
@@ -87,10 +90,10 @@ export default function Hero({ route, request }: Props) {
       {route && (
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
           <HeroStat
-            label="満足度スコア"
-            target={route.summary.total_score}
-            format={(v) => `${Math.round(v)}`}
-            sub={`訪問 ${route.summary.visited_count}件`}
+            label="訪問スポット数"
+            target={route.summary.visited_count}
+            format={(v) => `${Math.round(v)}件`}
+            sub={`${visitedAreas}エリアを周遊`}
           />
           <HeroStat
             label="所要時間"

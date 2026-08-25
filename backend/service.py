@@ -284,8 +284,12 @@ def summarize_route(work, travel, modes, photos, walk_geometry, result, total, s
         mins = int(round(travel[i, j]))
         from_stop, to_stop = stops[order], stops[order + 1]
         if raw.startswith("鉄道"):
-            mode, detail = "鉄道", raw.split(":", 1)[1]
-            geometry = _rail_geometry(from_stop.lat, from_stop.lon, to_stop.lat, to_stop.lon, detail)
+            from travel_time import rail_label
+
+            plain = raw.split(":", 1)[1]           # "駅A→駅B"（常に2駅、_rail_geometryの入力用）
+            st_a, st_b = plain.split("→")
+            mode, detail = "鉄道", rail_label(st_a, st_b)  # 表示用（乗換があれば鎌倉駅を明示）
+            geometry = _rail_geometry(from_stop.lat, from_stop.lon, to_stop.lat, to_stop.lon, plain)
         else:
             mode, detail = "徒歩", None
             geometry = _walk_geometry(walk_geometry, from_stop.name, to_stop.name)
@@ -330,6 +334,7 @@ def build_route_response(df, travel, modes, photos, walk_geometry, req: RouteReq
     result, total = solve(
         work, travel, budget_min, req.start_hour,
         search_sec=req.search_sec, max_wait=req.max_wait,
+        must_visit=set(req.must_visit),
     )
     if result is None:
         return None

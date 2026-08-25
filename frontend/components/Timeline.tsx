@@ -1,11 +1,14 @@
 import Image from "next/image";
 import type { Segment, RouteResponse } from "@/lib/types";
-import { areaColor, areaIcon, stars } from "@/lib/areaStyles";
+import { areaColor, areaIcon } from "@/lib/areaStyles";
 
 function Connector({ segment }: { segment: Segment }) {
   return (
-    <div className="flex w-14 shrink-0 flex-col items-center justify-center gap-1 self-center text-center text-[0.72rem] text-[#8a8a8a]">
+    <div className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 self-center text-center text-[0.72rem] text-[#8a8a8a]">
       <span className="text-base leading-none">{segment.mode === "鉄道" ? "🚃" : "🚶"}</span>
+      {segment.mode === "鉄道" && segment.detail && (
+        <span className="text-[0.66rem] leading-tight">{segment.detail}</span>
+      )}
       <span>{segment.minutes}分</span>
     </div>
   );
@@ -74,11 +77,6 @@ export default function Timeline({ route }: { route: RouteResponse }) {
                       </span>
                     </div>
                     <div className="mt-1 text-[0.8rem] text-[#8a8a8a]">{stop.arrival_clock}</div>
-
-                    <div className="mt-1.5 text-[0.85rem]" style={{ color, letterSpacing: "1px" }}>
-                      {stars(stop.score)}{" "}
-                      <span className="text-[0.72rem] text-[#8a8a8a]">スコア{stop.score}</span>
-                    </div>
 
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       <span

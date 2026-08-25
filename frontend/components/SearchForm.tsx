@@ -4,32 +4,27 @@ import { useState } from "react";
 import type { RouteRequest } from "@/lib/types";
 
 interface Props {
-  areas: string[];
+  pickedAreas: string[];
+  mustVisit: string[];
   loading: boolean;
   onSubmit: (req: RouteRequest) => void;
 }
 
 const SEARCH_SEC_OPTIONS = [5, 15, 30];
 
-export default function SearchForm({ areas, loading, onSubmit }: Props) {
+export default function SearchForm({ pickedAreas, mustVisit, loading, onSubmit }: Props) {
   const [startHour, setStartHour] = useState(9.0);
   const [budgetHours, setBudgetHours] = useState(6.0);
-  const [picked, setPicked] = useState<string[]>([]);
   const [searchSec, setSearchSec] = useState(5);
   const [maxWait, setMaxWait] = useState(60);
-
-  function toggleArea(area: string) {
-    setPicked((prev) =>
-      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
-    );
-  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     onSubmit({
       start_hour: startHour,
       budget_hours: budgetHours,
-      areas: picked,
+      areas: pickedAreas,
+      must_visit: mustVisit,
       search_sec: searchSec,
       max_wait: maxWait,
     });
@@ -66,25 +61,11 @@ export default function SearchForm({ areas, loading, onSubmit }: Props) {
         />
       </label>
 
-      <fieldset className="flex flex-col gap-1 text-sm text-[#4a4a4a]">
-        <legend className="mb-1">行きたいエリア（未選択なら全域から選びます）</legend>
-        <div className="flex flex-wrap gap-2">
-          {areas.map((area) => (
-            <button
-              type="button"
-              key={area}
-              onClick={() => toggleArea(area)}
-              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                picked.includes(area)
-                  ? "border-[#3d7a6f] bg-[#3d7a6f] text-white"
-                  : "border-[#e0d9cc] bg-[#f2ede3] text-[#4a4a4a]"
-              }`}
-            >
-              {area}
-            </button>
-          ))}
-        </div>
-      </fieldset>
+      {mustVisit.length > 0 && (
+        <p className="text-xs text-[#4a4a4a]">
+          行きたい場所を{mustVisit.length}件選択中（上の一覧で変更できます）
+        </p>
+      )}
 
       <details className="text-sm text-[#4a4a4a]">
         <summary className="cursor-pointer select-none">詳細設定</summary>

@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field
 class RouteRequest(BaseModel):
     start_hour: float = Field(9.0, ge=7.0, le=12.0, description="出発時刻")
     budget_hours: float = Field(6.0, ge=3.0, le=10.0, description="持ち時間")
-    areas: list[str] = Field(default_factory=list, description="行きたいエリア（空なら全域）")
+    areas: list[str] = Field(default_factory=list, description="行きたいエリア（空なら全域、スコアの重み付けにのみ使う）")
+    must_visit: list[str] = Field(default_factory=list, description="必ず訪問するスポット名（空なら制約なし）")
     search_sec: int = Field(5, ge=1, le=60, description="計算時間（秒）")
     max_wait: int = Field(60, ge=0, le=90, description="開門待ちの許容（分）")
 
@@ -36,7 +37,7 @@ class Segment(BaseModel):
     from_index: int
     to_index: int
     mode: str          # "徒歩" | "鉄道"
-    detail: str | None  # 鉄道の場合の "始発駅→終着駅"
+    detail: str | None  # 鉄道の場合の表示用ラベル。乗換があれば "始発駅→鎌倉(乗換)→終着駅"
     minutes: int
     geometry: list[tuple[float, float]] | None = None  # [(lat,lon), ...] 経路の経由点。無ければ直線で描画
 
@@ -83,3 +84,14 @@ class RouteResponse(BaseModel):
 
 class AreasResponse(BaseModel):
     areas: list[str]
+
+
+class SpotSummary(BaseModel):
+    """「行きたい場所」選択UI用の最小限のスポット情報"""
+    name: str
+    area: str
+    photo_url: str | None = None
+
+
+class SpotsResponse(BaseModel):
+    spots: list[SpotSummary]

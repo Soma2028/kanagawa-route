@@ -7,15 +7,19 @@ import Hero from "@/components/Hero";
 import LoadingMessage from "@/components/LoadingMessage";
 import RouteBreakdown from "@/components/RouteBreakdown";
 import SearchForm from "@/components/SearchForm";
+import SpotPicker from "@/components/SpotPicker";
 import Timeline from "@/components/Timeline";
-import { ApiError, fetchAreas, fetchRoute } from "@/lib/api";
-import type { RouteRequest, RouteResponse } from "@/lib/types";
+import { ApiError, fetchAreas, fetchRoute, fetchSpots } from "@/lib/api";
+import type { RouteRequest, RouteResponse, SpotSummary } from "@/lib/types";
 
 // Leaflet は window/document に依存するためサーバーではレンダリングしない
 const RouteMap = dynamic(() => import("@/components/RouteMap"), { ssr: false });
 
 export default function Home() {
   const [areas, setAreas] = useState<string[]>([]);
+  const [spots, setSpots] = useState<SpotSummary[]>([]);
+  const [pickedAreas, setPickedAreas] = useState<string[]>([]);
+  const [mustVisit, setMustVisit] = useState<string[]>([]);
   const [route, setRoute] = useState<RouteResponse | null>(null);
   const [lastRequest, setLastRequest] = useState<RouteRequest | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,7 +29,22 @@ export default function Home() {
     fetchAreas()
       .then(setAreas)
       .catch(() => setError("エリア一覧の取得に失敗しました。バックエンドが起動しているか確認してください。"));
+    fetchSpots()
+      .then(setSpots)
+      .catch(() => setError("スポット一覧の取得に失敗しました。バックエンドが起動しているか確認してください。"));
   }, []);
+
+  function toggleArea(area: string) {
+    setPickedAreas((prev) =>
+      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
+    );
+  }
+
+  function toggleSpot(name: string) {
+    setMustVisit((prev) =>
+      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
+    );
+  }
 
   async function handleSubmit(req: RouteRequest) {
     setLastRequest(req);
@@ -46,9 +65,25 @@ export default function Home() {
     <div className="mx-auto max-w-6xl px-6 py-8">
       <Hero route={route} request={lastRequest} />
 
+      <div className="mt-6">
+        <SpotPicker
+          areas={areas}
+          spots={spots}
+          pickedAreas={pickedAreas}
+          onToggleArea={toggleArea}
+          mustVisit={mustVisit}
+          onToggleSpot={toggleSpot}
+        />
+      </div>
+
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="sticky top-4 self-start">
-          <SearchForm areas={areas} loading={loading} onSubmit={handleSubmit} />
+          <SearchForm
+            pickedAreas={pickedAreas}
+            mustVisit={mustVisit}
+            loading={loading}
+            onSubmit={handleSubmit}
+          />
         </aside>
 
         <main className="min-w-0">
@@ -60,7 +95,7 @@ export default function Home() {
 
           {!route && !error && (
             <div className="rounded-lg border border-[#e0d9cc] bg-[#f2ede3] p-4 text-sm text-[#4a4a4a]">
-              左のサイドバーで条件を設定して「ルートを計算」を押してください
+              上で行きたい場所を選び、左のサイドバーで条件を設定して「ルートを計算」を押してください
             </div>
           )}
 

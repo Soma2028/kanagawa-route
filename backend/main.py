@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from optimize import load_data
 
-from .schemas import AreasResponse, RouteRequest, RouteResponse
+from .schemas import AreasResponse, RouteRequest, RouteResponse, SpotSummary, SpotsResponse
 from .service import build_route_response
 
 STATE: dict = {}
@@ -73,6 +73,22 @@ def get_areas() -> AreasResponse:
     # 起点・昼食は選択可能な「行きたいエリア」ではないため除く
     areas = sorted(df[~df["area"].isin(["起点", "昼食"])]["area"].unique().tolist())
     return AreasResponse(areas=areas)
+
+
+@app.get("/api/spots", response_model=SpotsResponse)
+def get_spots() -> SpotsResponse:
+    """「行きたい場所」選択UI用に全スポットの名前・エリア・写真を返す"""
+    df = STATE["df"]
+    photos = STATE["photos"]
+    real = df[~df["area"].isin(["起点", "昼食"])]
+    spots = [
+        SpotSummary(
+            name=r["name"], area=r["area"],
+            photo_url=(photos.get(r["name"]) or {}).get("photo_url"),
+        )
+        for _, r in real.iterrows()
+    ]
+    return SpotsResponse(spots=spots)
 
 
 @app.post("/api/route", response_model=RouteResponse)

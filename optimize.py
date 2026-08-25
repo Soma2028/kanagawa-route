@@ -37,7 +37,7 @@ def load_data():
     }])
     df = pd.concat([start, df], ignore_index=True)
 
-    from travel_time import best_travel, nearest_station, rail_label, walk_min
+    from travel_time import best_travel, nearest_station, walk_min
 
     n = len(df)
     full = np.zeros((n, n))
@@ -59,7 +59,7 @@ def load_data():
             a, b = df.iloc[i], df.iloc[j]
             only_walk = walk_min(a["lat"], a["lon"], b["lat"], b["lon"])
             if full[i, j] < only_walk - 0.5:
-                modes[i, j] = f"鉄道:{rail_label(stations[i][0], stations[j][0])}"
+                modes[i, j] = f"鉄道:{stations[i][0]}→{stations[j][0]}"
 
     # 起点から各スポットへの移動時間を計算する（乗車駅によって待ち時間が
     # 変わり得るため、往復それぞれ best_travel を呼ぶ＝対称とは限らない）
@@ -69,9 +69,9 @@ def load_data():
         only_walk = walk_min(START_LAT, START_LON, r["lat"], r["lon"])
         st_b, to_b = stations[k]
         full[0, k], is_rail_out = best_travel(only_walk, st_a, to_a, st_b, to_b)
-        modes[0, k] = f"鉄道:{rail_label(st_a, st_b)}" if is_rail_out else "徒歩"
+        modes[0, k] = f"鉄道:{st_a}→{st_b}" if is_rail_out else "徒歩"
         full[k, 0], is_rail_in = best_travel(only_walk, st_b, to_b, st_a, to_a)
-        modes[k, 0] = f"鉄道:{rail_label(st_b, st_a)}" if is_rail_in else "徒歩"
+        modes[k, 0] = f"鉄道:{st_b}→{st_a}" if is_rail_in else "徒歩"
 
     # 昼食休憩ノードを追加する。特定の店は指定せず、全スポットの重心を仮の位置
     # とする。移動時間を単純に0にすると、挿入した区間の本来の移動時間が
@@ -97,9 +97,9 @@ def load_data():
         only_walk = walk_min(lunch_lat, lunch_lon, r["lat"], r["lon"])
         st_b, to_b = stations[k]
         full[lunch_idx, k], is_rail_out = best_travel(only_walk, lunch_st, lunch_to_st, st_b, to_b)
-        modes[lunch_idx, k] = f"鉄道:{rail_label(lunch_st, st_b)}" if is_rail_out else "徒歩"
+        modes[lunch_idx, k] = f"鉄道:{lunch_st}→{st_b}" if is_rail_out else "徒歩"
         full[k, lunch_idx], is_rail_in = best_travel(only_walk, st_b, to_b, lunch_st, lunch_to_st)
-        modes[k, lunch_idx] = f"鉄道:{rail_label(st_b, lunch_st)}" if is_rail_in else "徒歩"
+        modes[k, lunch_idx] = f"鉄道:{st_b}→{lunch_st}" if is_rail_in else "徒歩"
 
     return df, full, modes
 

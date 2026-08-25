@@ -4,8 +4,19 @@ export interface RouteRequest {
   start_hour: number;
   budget_hours: number;
   areas: string[];
+  must_visit: string[];
   search_sec: number;
   max_wait: number;
+}
+
+export interface SpotSummary {
+  name: string;
+  area: string;
+  photo_url: string | null;
+}
+
+export interface SpotsResponse {
+  spots: SpotSummary[];
 }
 
 export interface Stop {

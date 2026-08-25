@@ -32,8 +32,3 @@ export function areaColor(area: string): string {
 export function areaIcon(area: string): string {
   return AREA_ICONS[area] ?? "📍";
 }
-
-export function stars(score: number): string {
-  const filled = Math.round(score / 2);
-  return "★".repeat(filled) + "☆".repeat(5 - filled);
-}

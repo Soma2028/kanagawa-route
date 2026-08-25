@@ -165,7 +165,7 @@ def build_matrix(df):
             st_b, to_b = stations[j]
             m, is_rail = best_travel(walk[i, j], st_a, to_a, st_b, to_b)
             minutes[i, j] = m
-            modes[i, j] = f"鉄道:{rail_label(st_a, st_b)}" if is_rail else "徒歩"
+            modes[i, j] = f"鉄道:{st_a}→{st_b}" if is_rail else "徒歩"
 
     return minutes, modes
 
