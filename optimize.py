@@ -37,7 +37,7 @@ def load_data():
     }])
     df = pd.concat([start, df], ignore_index=True)
 
-    from travel_time import best_travel, nearest_station, walk_min
+    from travel_time import best_travel, nearest_station, rail_label, walk_min
 
     n = len(df)
     full = np.zeros((n, n))
@@ -59,7 +59,7 @@ def load_data():
             a, b = df.iloc[i], df.iloc[j]
             only_walk = walk_min(a["lat"], a["lon"], b["lat"], b["lon"])
             if full[i, j] < only_walk - 0.5:
-                modes[i, j] = f"鉄道:{stations[i][0]}→{stations[j][0]}"
+                modes[i, j] = f"鉄道:{rail_label(stations[i][0], stations[j][0])}"
 
     # 起点から各スポットへの移動時間を計算する（乗車駅によって待ち時間が
     # 変わり得るため、往復それぞれ best_travel を呼ぶ＝対称とは限らない）
@@ -69,9 +69,9 @@ def load_data():
         only_walk = walk_min(START_LAT, START_LON, r["lat"], r["lon"])
         st_b, to_b = stations[k]
         full[0, k], is_rail_out = best_travel(only_walk, st_a, to_a, st_b, to_b)
-        modes[0, k] = f"鉄道:{st_a}→{st_b}" if is_rail_out else "徒歩"
+        modes[0, k] = f"鉄道:{rail_label(st_a, st_b)}" if is_rail_out else "徒歩"
         full[k, 0], is_rail_in = best_travel(only_walk, st_b, to_b, st_a, to_a)
-        modes[k, 0] = f"鉄道:{st_b}→{st_a}" if is_rail_in else "徒歩"
+        modes[k, 0] = f"鉄道:{rail_label(st_b, st_a)}" if is_rail_in else "徒歩"
 
     # 昼食休憩ノードを追加する。特定の店は指定せず、全スポットの重心を仮の位置
     # とする。移動時間を単純に0にすると、挿入した区間の本来の移動時間が
@@ -97,16 +97,22 @@ def load_data():
         only_walk = walk_min(lunch_lat, lunch_lon, r["lat"], r["lon"])
         st_b, to_b = stations[k]
         full[lunch_idx, k], is_rail_out = best_travel(only_walk, lunch_st, lunch_to_st, st_b, to_b)
-        modes[lunch_idx, k] = f"鉄道:{lunch_st}→{st_b}" if is_rail_out else "徒歩"
+        modes[lunch_idx, k] = f"鉄道:{rail_label(lunch_st, st_b)}" if is_rail_out else "徒歩"
         full[k, lunch_idx], is_rail_in = best_travel(only_walk, st_b, to_b, lunch_st, lunch_to_st)
-        modes[k, lunch_idx] = f"鉄道:{st_b}→{lunch_st}" if is_rail_in else "徒歩"
+        modes[k, lunch_idx] = f"鉄道:{rail_label(st_b, lunch_st)}" if is_rail_in else "徒歩"
 
     return df, full, modes
 
 
 def solve(df, travel, budget_min, start_hour,
-          search_sec=SEARCH_SEC, penalty_scale=100, max_wait=60):
-    """満足度スコアの合計を最大化するルートを求める"""
+          search_sec=SEARCH_SEC, penalty_scale=100, max_wait=60, must_visit=None):
+    """満足度スコアの合計を最大化するルートを求める
+
+    must_visit: 必ずルートに含めるスポット名の集合。省略可能を表す
+    AddDisjunction を呼ばないことで、通常の訪問ノードと同様に必須ノード
+    として扱わせる。
+    """
+    must_visit = must_visit or set()
     n = len(df)
     manager = pywrapcp.RoutingIndexManager(n, 1, 0)   # n地点, 1経路, 起点0
     routing = pywrapcp.RoutingModel(manager)
@@ -146,6 +152,8 @@ def solve(df, travel, budget_min, start_hour,
     needs_lunch = crosses_lunch(start_hour, budget_min)
     for i in range(1, n):
         r = df.iloc[i]
+        if r["name"] in must_visit:
+            continue                    # 省略不可（disjunctionを付けない＝必須ノード）
         if r["name"] == LUNCH_NAME:
             penalty = LUNCH_PENALTY if needs_lunch else 0
         else:
@@ -153,9 +161,16 @@ def solve(df, travel, budget_min, start_hour,
         routing.AddDisjunction([manager.NodeToIndex(i)], penalty)
 
     params = pywrapcp.DefaultRoutingSearchParameters()
-    params.first_solution_strategy = (
-        routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
-    )
+    # PATH_CHEAPEST_ARC は必須ノードがあると初期解の構築に失敗しやすく
+    # （最大30秒探索しても解なしになるケースを確認済み）、必須ノードが
+    # あるときは PARALLEL_CHEAPEST_INSERTION に切り替える。通常時（必須
+    # ノードなし）はスコアの出やすさで PATH_CHEAPEST_ARC の方が優れている
+    # ため、そちらを維持する。
+    if must_visit:
+        first_solution = routing_enums_pb2.FirstSolutionStrategy.PARALLEL_CHEAPEST_INSERTION
+    else:
+        first_solution = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    params.first_solution_strategy = first_solution
     params.local_search_metaheuristic = (
         routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
     )

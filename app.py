@@ -29,12 +29,6 @@ AREA_ICONS = {
 }
 
 
-def stars(score):
-    """スコアを5段階の星に変換する"""
-    filled = round(score / 2)
-    return "★" * filled + "☆" * (5 - filled)
-
-
 # ---- スタイル ----
 st.markdown("""
 <style>
@@ -69,7 +63,6 @@ st.markdown("""
 }
 .spot-name { font-size: 1.15rem; font-weight: 700; color: #2c2c2c; }
 .spot-time { font-size: 0.9rem; color: #8a8a8a; margin-left: auto; }
-.spot-stars { font-size: 0.9rem; margin-top: 8px; letter-spacing: 1px; }
 .badges { margin-top: 8px; }
 .badge {
     display: inline-block; padding: 3px 10px; border-radius: 20px;
@@ -131,30 +124,48 @@ with st.sidebar:
     start_hour = st.slider("出発時刻", 7.0, 12.0, 9.0, 0.5, format="%.1f時")
     hours = st.slider("持ち時間", 3.0, 10.0, 6.0, 0.5, format="%.1f時間")
 
-    areas = sorted(df[df["area"] != "起点"]["area"].unique())
-    picked = st.multiselect("行きたいエリア", areas,
-                            help="未選択なら全域から選びます")
-
     with st.expander("詳細設定"):
         search_sec = st.selectbox("計算時間（秒）", [5, 15, 30], index=0)
         max_wait = st.slider("開門待ちの許容", 0, 90, 60, 15, format="%d分")
 
     run = st.button("ルートを計算", type="primary", use_container_width=True)
 
-# エリア選択を好みとしてスコアに反映する
-work = df.copy()
+# ---- 行きたい場所を選ぶ ----
+st.subheader("行きたい場所を選ぶ")
+st.caption("選んだ場所は必ずルートに含めます（未選択なら34件から自動で選びます）")
+
+area_order = [a for a in AREA_COLORS if a not in ("起点", "昼食")]
+spot_names = df.loc[df["area"].isin(area_order), "name"].tolist()
+
+tabs = st.tabs([f"{AREA_ICONS.get(a, '📍')} {a}" for a in area_order])
+for tab, area in zip(tabs, area_order):
+    with tab:
+        area_spots = df[df["area"] == area]
+        cols = st.columns(3)
+        for i, (_, r) in enumerate(area_spots.iterrows()):
+            with cols[i % 3]:
+                with st.container(border=True):
+                    photo = photos.get(r["name"])
+                    if photo and isinstance(photo.get("photo_url"), str):
+                        st.image(photo["photo_url"], width="stretch")
+                    st.checkbox(r["name"], key=f"pick_{r['name']}")
+
+picked = [name for name in spot_names if st.session_state.get(f"pick_{name}")]
 if picked:
-    work.loc[~work["area"].isin(picked + ["起点"]), "score"] = 1
+    st.caption(f"選択中（{len(picked)}件）: " + " / ".join(picked))
+
+work = df.copy()
 
 # ---- 実行 ----
 if not run:
-    st.info("左のサイドバーで条件を設定して「ルートを計算」を押してください")
+    st.info("行きたい場所を選び、左のサイドバーで条件を設定して「ルートを計算」を押してください")
     st.stop()
 
 with st.spinner("最適なルートを探しています..."):
-    result, total = solve(
+    result, _ = solve(
         work, travel, int(hours * 60), start_hour,
         search_sec=search_sec, max_wait=max_wait,
+        must_visit=set(picked),
     )
 
 if result is None:
@@ -171,9 +182,10 @@ stay_total = sum(int(work.iloc[i]["stay_min"]) for i, _ in spots)
 move_total = int(end_min - stay_total)
 
 # ---- サマリーカード ----
+visited_areas = work.iloc[[i for i, _ in spots]]["area"].nunique()
 c1, c2, c3 = st.columns(3)
 cards = [
-    (c1, "満足度スコア", f"{total}", f"訪問 {len(spots)}件"),
+    (c1, "訪問スポット数", f"{len(spots)}件", f"{visited_areas}エリアを周遊"),
     (c2, "所要時間", f"{end_min / 60:.1f}時間",
      f"移動 {move_total}分 / 滞在 {stay_total}分"),
     (c3, "拝観料合計", f"¥{total_fee:,}",
@@ -217,7 +229,6 @@ with left:
         else:
             icon = AREA_ICONS.get(r["area"], "📍")
             fee = f"¥{int(r['fee'])}" if r["fee"] else "無料"
-            score = int(r["score"])
             badges = (
                 f'<span class="badge badge-area" style="background:{color}">'
                 f'{r["area"]}</span>'
@@ -243,9 +254,6 @@ with left:
                 f'<span class="spot-name">{icon} {r["name"]}</span>'
                 f'<span class="spot-time">{clock}</span>'
                 f'</div>'
-                f'<div class="spot-stars" style="color:{color}">'
-                f'{stars(score)} <span style="color:#8a8a8a;font-size:0.8rem">'
-                f'スコア {score}</span></div>'
                 f'<div class="badges">{badges}</div>'
                 + photo_html
                 + (f'<div class="spot-desc">{desc}</div>' if desc else "")

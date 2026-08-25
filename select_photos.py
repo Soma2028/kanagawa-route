@@ -7,7 +7,18 @@ st.title("画像候補の選別")
 st.caption("各スポットで使う1枚を選び、最後にCSVへ書き出します")
 
 cand = pd.read_csv("photo_candidates.csv")
-names = cand["name"].unique()
+
+try:
+    already = set(pd.read_csv("photos_selected.csv")["name"])
+except FileNotFoundError:
+    already = set()
+
+# 未選定のスポットだけを対象にする（選定済みは再表示しない）
+names = [n for n in cand["name"].unique() if n not in already]
+
+if not names:
+    st.success("すべてのスポットで写真が選定済みです")
+    st.stop()
 
 if "picked" not in st.session_state:
     st.session_state.picked = {}
@@ -52,5 +63,11 @@ if st.button("選択結果をCSVに保存", type="primary"):
             "photo_license_url": info["license_url"],
             "photo_file": info["file"],
         })
-    pd.DataFrame(rows).to_csv("photos_selected.csv", index=False)
-    st.success(f"保存しました: {len(rows)}件 → photos_selected.csv")
+    new_df = pd.DataFrame(rows)
+    try:
+        existing = pd.read_csv("photos_selected.csv")
+        out = pd.concat([existing, new_df], ignore_index=True)
+    except FileNotFoundError:
+        out = new_df
+    out.to_csv("photos_selected.csv", index=False)
+    st.success(f"追加しました: {len(rows)}件 → photos_selected.csv（合計{len(out)}件）")

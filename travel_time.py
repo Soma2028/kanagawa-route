@@ -94,14 +94,26 @@ def wait_min(boarding_station, other_station):
     return LINE_HEADWAY_MIN[_boarding_line(boarding_station, other_station)] / 2
 
 
+def _needs_transfer(st_a, st_b):
+    """異なる路線同士で、どちらも鎌倉駅ではない区間か（＝鎌倉駅での乗り換えが要るか）"""
+    same_line = STATION_LINES[st_a] == STATION_LINES[st_b]
+    via_kamakura_endpoint = st_a == "鎌倉" or st_b == "鎌倉"
+    return not (same_line or via_kamakura_endpoint)
+
+
 def rail_min(st_a, st_b):
     """駅間の乗車時間。同一路線内（または片方が鎌倉駅）なら鎌倉駅基準の差分、
     路線が異なる場合は鎌倉駅での乗り換えを挟んだ合算にする"""
-    same_line = STATION_LINES[st_a] == STATION_LINES[st_b]
-    via_kamakura_endpoint = st_a == "鎌倉" or st_b == "鎌倉"
-    if same_line or via_kamakura_endpoint:
+    if not _needs_transfer(st_a, st_b):
         return abs(RAIL_FROM_KAMAKURA[st_a] - RAIL_FROM_KAMAKURA[st_b])
     return RAIL_FROM_KAMAKURA[st_a] + TRANSFER_MIN + RAIL_FROM_KAMAKURA[st_b]
+
+
+def rail_label(st_a, st_b):
+    """鉄道区間の表示ラベル。乗り換えが要る区間は鎌倉駅を経由駅として明示する"""
+    if _needs_transfer(st_a, st_b):
+        return f"{st_a}→鎌倉(乗換)→{st_b}"
+    return f"{st_a}→{st_b}"
 
 
 def best_travel(only_walk, station_a, to_station_a, station_b, to_station_b):
@@ -153,7 +165,7 @@ def build_matrix(df):
             st_b, to_b = stations[j]
             m, is_rail = best_travel(walk[i, j], st_a, to_a, st_b, to_b)
             minutes[i, j] = m
-            modes[i, j] = f"鉄道:{st_a}→{st_b}" if is_rail else "徒歩"
+            modes[i, j] = f"鉄道:{rail_label(st_a, st_b)}" if is_rail else "徒歩"
 
     return minutes, modes
 
