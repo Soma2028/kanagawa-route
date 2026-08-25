@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import type { RouteRequest } from "@/lib/types";
 
 interface Props {
+  startHour: number;
+  onStartHourChange: (hour: number) => void;
+  budgetHours: number;
+  onBudgetHoursChange: (hours: number) => void;
   pickedAreas: string[];
   mustVisit: string[];
   loading: boolean;
@@ -26,10 +29,16 @@ function formatDuration(hours: number): string {
   return m === 0 ? `${h}時間` : `${h}時間${m}分`;
 }
 
-export default function SearchForm({ pickedAreas, mustVisit, loading, onSubmit }: Props) {
-  const [startHour, setStartHour] = useState(9.0);
-  const [budgetHours, setBudgetHours] = useState(6.0);
-
+export default function SearchForm({
+  startHour,
+  onStartHourChange,
+  budgetHours,
+  onBudgetHoursChange,
+  pickedAreas,
+  mustVisit,
+  loading,
+  onSubmit,
+}: Props) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     onSubmit({
@@ -57,7 +66,7 @@ export default function SearchForm({ pickedAreas, mustVisit, loading, onSubmit }
           max={12}
           step={0.5}
           value={startHour}
-          onChange={(e) => setStartHour(Number(e.target.value))}
+          onChange={(e) => onStartHourChange(Number(e.target.value))}
         />
       </label>
 
@@ -69,7 +78,7 @@ export default function SearchForm({ pickedAreas, mustVisit, loading, onSubmit }
           max={10}
           step={0.5}
           value={budgetHours}
-          onChange={(e) => setBudgetHours(Number(e.target.value))}
+          onChange={(e) => onBudgetHoursChange(Number(e.target.value))}
         />
       </label>
 

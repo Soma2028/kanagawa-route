@@ -16,10 +16,13 @@ import type { RouteRequest, RouteResponse, SpotSummary } from "@/lib/types";
 const RouteMap = dynamic(() => import("@/components/RouteMap"), { ssr: false });
 
 export default function Home() {
+  const [view, setView] = useState<"input" | "result">("input");
   const [areas, setAreas] = useState<string[]>([]);
   const [spots, setSpots] = useState<SpotSummary[]>([]);
   const [pickedAreas, setPickedAreas] = useState<string[]>([]);
   const [mustVisit, setMustVisit] = useState<string[]>([]);
+  const [startHour, setStartHour] = useState(9.0);
+  const [budgetHours, setBudgetHours] = useState(6.0);
   const [route, setRoute] = useState<RouteResponse | null>(null);
   const [lastRequest, setLastRequest] = useState<RouteRequest | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,6 +50,7 @@ export default function Home() {
   }
 
   async function handleSubmit(req: RouteRequest) {
+    setView("result");
     setLastRequest(req);
     setLoading(true);
     setError(null);
@@ -61,9 +65,54 @@ export default function Home() {
     }
   }
 
+  if (view === "result") {
+    return (
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <Hero route={route} request={lastRequest} />
+
+        <button
+          type="button"
+          onClick={() => setView("input")}
+          className="mt-4 rounded-lg border border-[#e0d9cc] bg-white px-4 py-2 text-sm font-medium text-[#4a4a4a] transition-colors hover:bg-[#f2ede3]"
+        >
+          ← 条件を変える
+        </button>
+
+        <div className="mt-6">
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {loading && <LoadingMessage />}
+
+          {route && (
+            <div className="flex flex-col gap-6">
+              {route.lunch_note && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  {route.lunch_note}
+                </div>
+              )}
+              <Timeline route={route} />
+              <RouteMap route={route} />
+              <RouteBreakdown items={route.breakdown} />
+              <ExcludedSpots excluded={route.excluded} note={route.excluded_note} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <Hero route={route} request={lastRequest} />
+      <section className="rounded-2xl bg-[#3d7a6f] px-5 py-4 sm:px-8 sm:py-5">
+        <h1 className="text-xl font-bold text-white sm:text-2xl">⛩️ 鎌倉 周遊ルート最適化</h1>
+        <p className="mt-0.5 text-xs text-white/80 sm:text-sm">
+          持ち時間と好みに合わせて、満足度が最大になる順路を提案します
+        </p>
+      </section>
 
       <div className="mt-6">
         <SpotPicker
@@ -79,6 +128,10 @@ export default function Home() {
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="sticky top-4 self-start">
           <SearchForm
+            startHour={startHour}
+            onStartHourChange={setStartHour}
+            budgetHours={budgetHours}
+            onBudgetHoursChange={setBudgetHours}
             pickedAreas={pickedAreas}
             mustVisit={mustVisit}
             loading={loading}
@@ -88,30 +141,8 @@ export default function Home() {
 
         <main className="min-w-0">
           {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               {error}
-            </div>
-          )}
-
-          {!route && !error && (
-            <div className="rounded-lg border border-[#e0d9cc] bg-[#f2ede3] p-4 text-sm text-[#4a4a4a]">
-              上で行きたい場所を選び、左のサイドバーで条件を設定して「ルートを計算」を押してください
-            </div>
-          )}
-
-          {loading && <LoadingMessage />}
-
-          {route && (
-            <div className="flex flex-col gap-6">
-              {route.lunch_note && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                  {route.lunch_note}
-                </div>
-              )}
-              <Timeline route={route} />
-              <RouteBreakdown items={route.breakdown} />
-              <RouteMap route={route} />
-              <ExcludedSpots excluded={route.excluded} note={route.excluded_note} />
             </div>
           )}
         </main>
