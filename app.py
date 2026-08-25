@@ -118,16 +118,33 @@ try:
 except FileNotFoundError:
     photos = {}
 
+# 計算時間・開門待ちの許容は開発者向けの調整値のため、UIには出さず固定する
+SEARCH_SEC = 5
+MAX_WAIT = 60
+
+
+def format_clock(hour):
+    """9.5 -> '09:30' のような時刻表記に変換する"""
+    hh = int(hour)
+    mm = int(round((hour % 1) * 60))
+    return f"{hh:02d}:{mm:02d}"
+
+
+def format_duration(hours):
+    """6.0 -> '6時間', 6.5 -> '6時間30分' のような表記に変換する"""
+    hh = int(hours)
+    mm = int(round((hours % 1) * 60))
+    return f"{hh}時間" if mm == 0 else f"{hh}時間{mm}分"
+
+
 # ---- サイドバー: 検索条件 ----
 with st.sidebar:
     st.header("検索条件")
 
     start_hour = st.slider("出発時刻", 7.0, 12.0, 9.0, 0.5, format="%.1f時")
+    st.caption(f"→ {format_clock(start_hour)}")
     hours = st.slider("持ち時間", 3.0, 10.0, 6.0, 0.5, format="%.1f時間")
-
-    with st.expander("詳細設定"):
-        search_sec = st.selectbox("計算時間（秒）", [5, 15, 30], index=0)
-        max_wait = st.slider("開門待ちの許容", 0, 90, 60, 15, format="%d分")
+    st.caption(f"→ {format_duration(hours)}")
 
     run = st.button("ルートを計算", type="primary", use_container_width=True)
 
@@ -165,7 +182,7 @@ if not run:
 with st.spinner("最適なルートを探しています..."):
     result, _ = solve(
         work, travel, int(hours * 60), start_hour,
-        search_sec=search_sec, max_wait=max_wait,
+        search_sec=SEARCH_SEC, max_wait=MAX_WAIT,
         must_visit=set(picked),
     )
 
