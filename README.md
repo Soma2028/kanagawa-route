@@ -1,6 +1,6 @@
 # 鎌倉 周遊ルート最適化アプリ
 
-- フロントエンド: https://kanagawa-route-snowy.vercel.app/
+- フロントエンド: https://kanagawa-route.vercel.app/
 - バックエンドAPI: https://kanagawa-route-api.onrender.com
 
 持ち時間と好みを入力すると、拝観時間の制約を守りつつ満足度が最大になる
