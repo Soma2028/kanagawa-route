@@ -42,7 +42,7 @@ export default function RouteMap({ route }: { route: RouteResponse }) {
   return (
     <div>
       <h2 className="mb-3 text-lg font-bold text-[#3a3230]">ルートマップ</h2>
-      <div className="h-[620px] w-full overflow-hidden rounded-[24px] border border-[#e9dcc4]">
+      <div className="h-[620px] w-full overflow-hidden rounded-card border border-[#e9dcc4]">
         <MapContainer
           center={rawPositions[0] ?? [35.3192, 139.55]}
           zoom={14}

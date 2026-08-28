@@ -44,7 +44,7 @@ function HeroStat({
 }) {
   const value = useCountUp(target);
   return (
-    <div className="rounded-[18px] bg-black/20 px-4 py-2.5">
+    <div className="rounded-tile bg-black/20 px-4 py-2.5">
       <div className="text-xs text-white/90">{label}</div>
       <div className="text-2xl font-bold text-white">{format(value)}</div>
       {sub && <div className="mt-0.5 text-xs text-white/90">{sub}</div>}
@@ -72,7 +72,7 @@ export default function Hero({ route, request }: Props) {
     : 0;
 
   return (
-    <section className="rounded-[28px] bg-[#3d7a6f] px-5 py-4 shadow-hero sm:px-8 sm:py-5">
+    <section className="rounded-band bg-[#3d7a6f] px-5 py-4 shadow-hero sm:px-8 sm:py-5">
       <h1 className="text-xl font-bold text-white sm:text-2xl">
         ⛩️ 鎌倉 周遊ルート最適化
       </h1>

@@ -25,14 +25,14 @@ export default function ExcludedSpots({
   const sorted = [...excluded].sort((a, b) => b.score - a.score);
 
   return (
-    <details className="rounded-[24px] border border-[#e9dcc4] bg-[#fffcf5] p-4 shadow-soft">
+    <details className="rounded-card border border-[#e9dcc4] bg-[#fffcf5] p-4 shadow-soft">
       <summary className="cursor-pointer text-lg font-bold text-[#3a3230]">外した候補</summary>
       <p className="mt-1 text-xs text-[#9b9086]">{note}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {sorted.map((e) => (
           <div
             key={e.name}
-            className="rounded-[14px] border border-[#e9dcc4] bg-[#faf4e8] px-3 py-2 text-xs"
+            className="rounded-chip border border-[#e9dcc4] bg-[#faf4e8] px-3 py-2 text-xs"
           >
             <div className="flex items-center gap-1.5">
               <span

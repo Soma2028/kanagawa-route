@@ -30,11 +30,14 @@ export default function Timeline({ route }: { route: RouteResponse }) {
               <div
                 className={
                   stop.type === "spot"
-                    ? "w-56 shrink-0 rounded-[20px] border border-[#e9dcc4] bg-[#fffcf5] p-3 shadow-soft"
-                    : "w-32 shrink-0 self-start rounded-[20px] border border-[#e9dcc4] bg-[#fffcf5] p-3 shadow-soft"
+                    ? "w-56 shrink-0 rounded-panel border border-[#e9dcc4] bg-[#fffcf5] p-3"
+                    : "w-32 shrink-0 self-start rounded-panel border border-[#e9dcc4] bg-[#fffcf5] p-3"
                 }
                 style={{
-                  borderTop: `4px solid ${color}`,
+                  // エリア色の帯。border-top だと角丸部分でテーパーして両端が尖るため、
+                  // border-radius に完全追従する inset shadow で描く。
+                  // shadow-soft はここで上書きされるので、同じ値を続けて指定している
+                  boxShadow: `inset 0 4px 0 ${color}, var(--shadow-soft)`,
                   animation: "card-fade-in 0.35s ease-out both",
                   animationDelay: `${order * 40}ms`,
                 }}
@@ -101,7 +104,7 @@ export default function Timeline({ route }: { route: RouteResponse }) {
                           width={300}
                           height={110}
                           unoptimized
-                          className="h-24 w-full rounded-[16px] object-cover"
+                          className="h-24 w-full rounded-inset object-cover"
                         />
                         <div className="mt-0.5 truncate text-[0.62rem] text-[#aca196]">
                           {stop.photo_artist} / {stop.photo_license}

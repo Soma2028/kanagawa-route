@@ -54,7 +54,7 @@ export default function SearchForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-5 rounded-[24px] border border-[#e9dcc4] bg-[#fffcf5] p-5 shadow-soft"
+      className="flex flex-col gap-5 rounded-card border border-[#e9dcc4] bg-[#fffcf5] p-5 shadow-soft"
     >
       <h2 className="text-lg font-bold text-[#3a3230]">検索条件</h2>
 

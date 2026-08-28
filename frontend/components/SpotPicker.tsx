@@ -26,7 +26,7 @@ export default function SpotPicker({
     pickedAreas.length > 0 ? spots.filter((s) => pickedAreas.includes(s.area)) : spots;
 
   return (
-    <section className="rounded-[24px] border border-[#e9dcc4] bg-[#fffcf5] p-5 shadow-soft">
+    <section className="rounded-card border border-[#e9dcc4] bg-[#fffcf5] p-5 shadow-soft">
       <h2 className="text-lg font-bold text-[#3a3230]">行きたい場所を選ぶ</h2>
       <p className="mt-1 text-xs text-[#9b9086]">
         選んだ場所は必ずルートに含めます（未選択なら自動で選びます）
@@ -61,7 +61,7 @@ export default function SpotPicker({
               type="button"
               key={spot.name}
               onClick={() => onToggleSpot(spot.name)}
-              className={`flex flex-col overflow-hidden rounded-[18px] border text-left transition-colors ${
+              className={`flex flex-col overflow-hidden rounded-tile border text-left transition-colors ${
                 picked ? "border-[#3d7a6f] ring-2 ring-[#3d7a6f]" : "border-[#e9dcc4]"
               }`}
             >
