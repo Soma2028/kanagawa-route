@@ -54,11 +54,11 @@ export default function SearchForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-5 rounded-xl border border-[#e0d9cc] bg-white p-5 shadow-sm"
+      className="flex flex-col gap-5 rounded-[24px] border border-[#e9dcc4] bg-[#fffcf5] p-5 shadow-soft"
     >
-      <h2 className="text-lg font-bold text-[#2c2c2c]">検索条件</h2>
+      <h2 className="text-lg font-bold text-[#3a3230]">検索条件</h2>
 
-      <label className="flex flex-col gap-1 text-sm text-[#4a4a4a]">
+      <label className="flex flex-col gap-1 text-sm text-[#5d534c]">
         出発時刻: {formatClock(startHour)}
         <input
           type="range"
@@ -70,7 +70,7 @@ export default function SearchForm({
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-[#4a4a4a]">
+      <label className="flex flex-col gap-1 text-sm text-[#5d534c]">
         持ち時間: {formatDuration(budgetHours)}
         <input
           type="range"
@@ -83,7 +83,7 @@ export default function SearchForm({
       </label>
 
       {mustVisit.length > 0 && (
-        <p className="text-xs text-[#4a4a4a]">
+        <p className="text-xs text-[#5d534c]">
           行きたい場所を{mustVisit.length}件選択中（上の一覧で変更できます）
         </p>
       )}
@@ -91,7 +91,7 @@ export default function SearchForm({
       <button
         type="submit"
         disabled={loading}
-        className="rounded-lg bg-[#3d7a6f] px-4 py-2 font-bold text-white transition-opacity disabled:opacity-50"
+        className="rounded-full bg-[#3d7a6f] px-4 py-2 font-bold text-white shadow-btn transition-opacity disabled:opacity-50"
       >
         {loading ? "計算中..." : "ルートを計算"}
       </button>

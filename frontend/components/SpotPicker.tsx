@@ -26,13 +26,13 @@ export default function SpotPicker({
     pickedAreas.length > 0 ? spots.filter((s) => pickedAreas.includes(s.area)) : spots;
 
   return (
-    <section className="rounded-xl border border-[#e0d9cc] bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-bold text-[#2c2c2c]">行きたい場所を選ぶ</h2>
-      <p className="mt-1 text-xs text-[#8a8a8a]">
+    <section className="rounded-[24px] border border-[#e9dcc4] bg-[#fffcf5] p-5 shadow-soft">
+      <h2 className="text-lg font-bold text-[#3a3230]">行きたい場所を選ぶ</h2>
+      <p className="mt-1 text-xs text-[#9b9086]">
         選んだ場所は必ずルートに含めます（未選択なら自動で選びます）
       </p>
 
-      <fieldset className="mt-4 flex flex-col gap-1 text-sm text-[#4a4a4a]">
+      <fieldset className="mt-4 flex flex-col gap-1 text-sm text-[#5d534c]">
         <legend className="mb-1">エリアで絞り込む（未選択なら全域）</legend>
         <div className="flex flex-wrap gap-2">
           {areas.map((area) => (
@@ -43,7 +43,7 @@ export default function SpotPicker({
               className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                 pickedAreas.includes(area)
                   ? "border-[#3d7a6f] bg-[#3d7a6f] text-white"
-                  : "border-[#e0d9cc] bg-[#f2ede3] text-[#4a4a4a]"
+                  : "border-[#e9dcc4] bg-[#f4ecdb] text-[#5d534c]"
               }`}
             >
               {area}
@@ -61,11 +61,11 @@ export default function SpotPicker({
               type="button"
               key={spot.name}
               onClick={() => onToggleSpot(spot.name)}
-              className={`flex flex-col overflow-hidden rounded-lg border text-left transition-colors ${
-                picked ? "border-[#3d7a6f] ring-2 ring-[#3d7a6f]" : "border-[#e0d9cc]"
+              className={`flex flex-col overflow-hidden rounded-[18px] border text-left transition-colors ${
+                picked ? "border-[#3d7a6f] ring-2 ring-[#3d7a6f]" : "border-[#e9dcc4]"
               }`}
             >
-              <div className="relative h-20 w-full bg-[#f2ede3]">
+              <div className="relative h-20 w-full bg-[#f4ecdb]">
                 {spot.photo_url && (
                   <Image
                     src={spot.photo_url}
@@ -86,7 +86,7 @@ export default function SpotPicker({
                   className="h-1.5 w-1.5 shrink-0 rounded-full"
                   style={{ background: color }}
                 />
-                <span className="truncate text-[0.72rem] text-[#2c2c2c]">{spot.name}</span>
+                <span className="truncate text-[0.72rem] text-[#3a3230]">{spot.name}</span>
               </div>
             </button>
           );
@@ -94,7 +94,7 @@ export default function SpotPicker({
       </div>
 
       {mustVisit.length > 0 && (
-        <p className="mt-3 text-xs text-[#4a4a4a]">
+        <p className="mt-3 text-xs text-[#5d534c]">
           選択中（{mustVisit.length}件）: {mustVisit.join(" / ")}
         </p>
       )}

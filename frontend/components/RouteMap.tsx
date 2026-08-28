@@ -41,8 +41,8 @@ export default function RouteMap({ route }: { route: RouteResponse }) {
 
   return (
     <div>
-      <h2 className="mb-3 text-lg font-bold text-[#2c2c2c]">ルートマップ</h2>
-      <div className="h-[620px] w-full overflow-hidden rounded-xl border border-[#e0d9cc]">
+      <h2 className="mb-3 text-lg font-bold text-[#3a3230]">ルートマップ</h2>
+      <div className="h-[620px] w-full overflow-hidden rounded-[24px] border border-[#e9dcc4]">
         <MapContainer
           center={rawPositions[0] ?? [35.3192, 139.55]}
           zoom={14}
@@ -93,7 +93,7 @@ export default function RouteMap({ route }: { route: RouteResponse }) {
             </span>
           ))}
       </div>
-      <p className="mt-1 text-[0.8rem] text-[#8a8a8a]">
+      <p className="mt-1 text-[0.8rem] text-[#9b9086]">
         実線＝徒歩 / オレンジの破線＝電車
       </p>
     </div>

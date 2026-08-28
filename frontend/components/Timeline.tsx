@@ -4,7 +4,7 @@ import { areaColor, areaIcon } from "@/lib/areaStyles";
 
 function Connector({ segment }: { segment: Segment }) {
   return (
-    <div className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 self-center text-center text-[0.72rem] text-[#8a8a8a]">
+    <div className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 self-center text-center text-[0.72rem] text-[#9b9086]">
       <span className="text-base leading-none">{segment.mode === "鉄道" ? "🚃" : "🚶"}</span>
       {segment.mode === "鉄道" && segment.detail && (
         <span className="text-[0.66rem] leading-tight">{segment.detail}</span>
@@ -19,7 +19,7 @@ export default function Timeline({ route }: { route: RouteResponse }) {
 
   return (
     <div className="relative">
-      <h2 className="mb-3 text-lg font-bold text-[#2c2c2c]">行程</h2>
+      <h2 className="mb-3 text-lg font-bold text-[#3a3230]">行程</h2>
       <div className="flex items-stretch gap-2 overflow-x-auto pb-3">
         {stops.map((stop, order) => {
           const color = areaColor(stop.area);
@@ -30,8 +30,8 @@ export default function Timeline({ route }: { route: RouteResponse }) {
               <div
                 className={
                   stop.type === "spot"
-                    ? "w-56 shrink-0 rounded-[10px] border border-[#e0d9cc] bg-white p-3 shadow-sm"
-                    : "w-32 shrink-0 self-start rounded-[10px] border border-[#e0d9cc] bg-white p-3 shadow-sm"
+                    ? "w-56 shrink-0 rounded-[20px] border border-[#e9dcc4] bg-[#fffcf5] p-3 shadow-soft"
+                    : "w-32 shrink-0 self-start rounded-[20px] border border-[#e9dcc4] bg-[#fffcf5] p-3 shadow-soft"
                 }
                 style={{
                   borderTop: `4px solid ${color}`,
@@ -47,8 +47,8 @@ export default function Timeline({ route }: { route: RouteResponse }) {
                     >
                       S
                     </span>
-                    <div className="mt-1.5 text-[0.9rem] font-bold text-[#2c2c2c]">{stop.name}</div>
-                    <div className="mt-0.5 text-[0.75rem] text-[#8a8a8a]">{stop.arrival_clock} 出発</div>
+                    <div className="mt-1.5 text-[0.9rem] font-bold text-[#3a3230]">{stop.name}</div>
+                    <div className="mt-0.5 text-[0.75rem] text-[#9b9086]">{stop.arrival_clock} 出発</div>
                   </>
                 ) : stop.type === "meal" ? (
                   <>
@@ -58,8 +58,8 @@ export default function Timeline({ route }: { route: RouteResponse }) {
                     >
                       {areaIcon(stop.area)}
                     </span>
-                    <div className="mt-1.5 text-[0.9rem] font-bold text-[#2c2c2c]">昼食休憩</div>
-                    <div className="mt-0.5 text-[0.75rem] text-[#8a8a8a]">
+                    <div className="mt-1.5 text-[0.9rem] font-bold text-[#3a3230]">昼食休憩</div>
+                    <div className="mt-0.5 text-[0.75rem] text-[#9b9086]">
                       {stop.arrival_clock}〜{stop.stay_min}分
                     </div>
                   </>
@@ -72,11 +72,11 @@ export default function Timeline({ route }: { route: RouteResponse }) {
                       >
                         {order}
                       </span>
-                      <span className="text-[0.95rem] font-bold text-[#2c2c2c]">
+                      <span className="text-[0.95rem] font-bold text-[#3a3230]">
                         {areaIcon(stop.area)} {stop.name}
                       </span>
                     </div>
-                    <div className="mt-1 text-[0.8rem] text-[#8a8a8a]">{stop.arrival_clock}</div>
+                    <div className="mt-1 text-[0.8rem] text-[#9b9086]">{stop.arrival_clock}</div>
 
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       <span
@@ -85,10 +85,10 @@ export default function Timeline({ route }: { route: RouteResponse }) {
                       >
                         {stop.area}
                       </span>
-                      <span className="rounded-full border border-[#e0d9cc] bg-[#f2ede3] px-2 py-0.5 text-[0.7rem] text-[#4a4a4a]">
+                      <span className="rounded-full border border-[#e9dcc4] bg-[#f4ecdb] px-2 py-0.5 text-[0.7rem] text-[#5d534c]">
                         滞在{stop.stay_min}分
                       </span>
-                      <span className="rounded-full border border-[#e0d9cc] bg-[#f2ede3] px-2 py-0.5 text-[0.7rem] text-[#4a4a4a]">
+                      <span className="rounded-full border border-[#e9dcc4] bg-[#f4ecdb] px-2 py-0.5 text-[0.7rem] text-[#5d534c]">
                         {stop.fee ? `¥${stop.fee}` : "無料"}
                       </span>
                     </div>
@@ -101,16 +101,16 @@ export default function Timeline({ route }: { route: RouteResponse }) {
                           width={300}
                           height={110}
                           unoptimized
-                          className="h-24 w-full rounded-lg object-cover"
+                          className="h-24 w-full rounded-[16px] object-cover"
                         />
-                        <div className="mt-0.5 truncate text-[0.62rem] text-[#a0a0a0]">
+                        <div className="mt-0.5 truncate text-[0.62rem] text-[#aca196]">
                           {stop.photo_artist} / {stop.photo_license}
                         </div>
                       </div>
                     )}
 
                     {stop.description && (
-                      <div className="mt-2 line-clamp-3 text-[0.75rem] leading-snug text-[#5a5a5a]">
+                      <div className="mt-2 line-clamp-3 text-[0.75rem] leading-snug text-[#6b6058]">
                         {stop.description}
                       </div>
                     )}
@@ -126,7 +126,7 @@ export default function Timeline({ route }: { route: RouteResponse }) {
       </div>
 
       {/* 右端に続きがあることを示すグラデーション（横スクロール可能なことのヒント） */}
-      <div className="pointer-events-none absolute top-9 right-0 bottom-3 w-10 bg-gradient-to-l from-[#faf7f0] to-transparent" />
+      <div className="pointer-events-none absolute top-9 right-0 bottom-3 w-10 bg-gradient-to-l from-[#f7f0e3] to-transparent" />
     </div>
   );
 }

@@ -21,5 +21,5 @@ export default function LoadingMessage() {
     return () => clearInterval(timer);
   }, []);
 
-  return <div className="mb-4 text-sm text-[#6b6b6b]">{MESSAGES[index]}</div>;
+  return <div className="mb-4 text-sm text-[#6b6058]">{MESSAGES[index]}</div>;
 }

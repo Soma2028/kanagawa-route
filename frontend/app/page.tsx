@@ -73,14 +73,14 @@ export default function Home() {
         <button
           type="button"
           onClick={() => setView("input")}
-          className="mt-4 rounded-lg border border-[#e0d9cc] bg-white px-4 py-2 text-sm font-medium text-[#4a4a4a] transition-colors hover:bg-[#f2ede3]"
+          className="mt-4 rounded-full border border-[#e9dcc4] bg-[#fffcf5] px-4 py-2 shadow-soft text-sm font-medium text-[#5d534c] transition-colors hover:bg-[#f4ecdb]"
         >
           ← 条件を変える
         </button>
 
         <div className="mt-6">
           {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <div className="mb-4 rounded-[16px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               {error}
             </div>
           )}
@@ -90,7 +90,7 @@ export default function Home() {
           {route && (
             <div className="flex flex-col gap-6">
               {route.lunch_note && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <div className="rounded-[16px] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                   {route.lunch_note}
                 </div>
               )}
@@ -107,7 +107,7 @@ export default function Home() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <section className="rounded-2xl bg-[#3d7a6f] px-5 py-4 sm:px-8 sm:py-5">
+      <section className="rounded-[28px] bg-[#3d7a6f] px-5 py-4 shadow-hero sm:px-8 sm:py-5">
         <h1 className="text-xl font-bold text-white sm:text-2xl">⛩️ 鎌倉 周遊ルート最適化</h1>
         <p className="mt-0.5 text-xs text-white/80 sm:text-sm">
           持ち時間と好みに合わせて、満足度が最大になる順路を提案します
@@ -141,7 +141,7 @@ export default function Home() {
 
         <main className="min-w-0">
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <div className="rounded-[16px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               {error}
             </div>
           )}

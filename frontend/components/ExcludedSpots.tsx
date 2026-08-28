@@ -25,24 +25,24 @@ export default function ExcludedSpots({
   const sorted = [...excluded].sort((a, b) => b.score - a.score);
 
   return (
-    <details className="rounded-xl border border-[#e0d9cc] bg-white p-4 shadow-sm">
-      <summary className="cursor-pointer text-lg font-bold text-[#2c2c2c]">外した候補</summary>
-      <p className="mt-1 text-xs text-[#8a8a8a]">{note}</p>
+    <details className="rounded-[24px] border border-[#e9dcc4] bg-[#fffcf5] p-4 shadow-soft">
+      <summary className="cursor-pointer text-lg font-bold text-[#3a3230]">外した候補</summary>
+      <p className="mt-1 text-xs text-[#9b9086]">{note}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {sorted.map((e) => (
           <div
             key={e.name}
-            className="rounded-lg border border-[#e0d9cc] bg-[#f8f6f0] px-3 py-2 text-xs"
+            className="rounded-[14px] border border-[#e9dcc4] bg-[#faf4e8] px-3 py-2 text-xs"
           >
             <div className="flex items-center gap-1.5">
               <span
                 className="h-2 w-2 shrink-0 rounded-full"
                 style={{ background: areaColor(e.area) }}
               />
-              <span className="font-bold text-[#2c2c2c]">{e.name}</span>
-              <span className="ml-auto pl-2 text-[#8a8a8a]">スコア{e.score}</span>
+              <span className="font-bold text-[#3a3230]">{e.name}</span>
+              <span className="ml-auto pl-2 text-[#9b9086]">スコア{e.score}</span>
             </div>
-            <div className="mt-1 text-[#8a8a8a]">{statusLabel(e)}</div>
+            <div className="mt-1 text-[#9b9086]">{statusLabel(e)}</div>
           </div>
         ))}
       </div>
